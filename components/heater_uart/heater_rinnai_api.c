@@ -9,15 +9,15 @@
 #include "esp_timer.h"
 #include "wifi_manager.h"
 
-uint16_t last_combustion_status = 1;
 extern uint32_t send_counter;
+
+uint16_t last_combustion_status = 1;
 
 rinnai_heater_info_t rinnai_heater_last;
 rinnai_heater_info_t rinnai_heater = 
 {
     .current_priority_location = 0x02,
 };
-
 
 esp_timer_handle_t rinnai_priority_timer;
 
@@ -409,7 +409,6 @@ void heater_rinnai_data_handle(uint8_t offset)
             printf("heater_rinnai type %02X,model %02X\r\n",rinnai_heater.type,rinnai_heater.model);
             wifi_rinnai_command_model_upload();
             heater_detect_finish(0);
-            wifi_rinnai_priority_timer_init();
             heater_poll_timer_start();
 			heater_heart_timer_start();
             break;
@@ -462,7 +461,6 @@ void heater_rinnai_data_handle(uint8_t offset)
             rinnai_heater.current_temperature_setting = char_to_hex(info_frame.current_temperature_setting[0]) << 4 | char_to_hex(info_frame.current_temperature_setting[1]);
             rinnai_heater.eco_status = char_to_hex(info_frame.eco_status[0]) << 4 | char_to_hex(info_frame.eco_status[1]);
             rinnai_heater.circulation_status = char_to_hex(info_frame.circulation_status[0]) << 4 | char_to_hex(info_frame.circulation_status[1]);
-            
             
             if((char_to_hex(info_frame.on_off_setting[0]) << 4 | char_to_hex(info_frame.on_off_setting[1])) == 0x20)
             {

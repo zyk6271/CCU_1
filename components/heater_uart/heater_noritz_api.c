@@ -6,6 +6,7 @@
 #include "crypto_aes.h"
 #include "network_typedef.h"
 #include "wifi_api.h"
+#include "wifi_manager.h"
 
 extern uint32_t send_counter;
 
@@ -275,8 +276,6 @@ void wifi_noritz_command_info_upload(void)
     plain_buf[1] = noritz_heater_temp.error;
     plain_buf[2] = noritz_heater_temp.total_flow_rate & 0xFF;
     plain_buf[3] = (noritz_heater_temp.total_flow_rate >> 8) & 0xFF;
-
-
     plain_buf[4] = noritz_heater_temp.flow_rate_of_heat_exchanger & 0xFF;
     plain_buf[5] = (noritz_heater_temp.flow_rate_of_heat_exchanger >> 8) & 0xFF;
     plain_buf[6] = noritz_heater_temp.flow_rate_of_circulation_pump & 0xFF;
@@ -407,7 +406,16 @@ void heater_noritz_data_handle(uint8_t offset)
             noritz_heater.current_temperature_setting = char_to_hex(info_frame.current_temperature_setting[0]) * 10 + char_to_hex(info_frame.current_temperature_setting[1]);
             noritz_heater.eco_status = char_to_hex(info_frame.eco_status[0]) * 10 + char_to_hex(info_frame.eco_status[1]);
             noritz_heater.circulation_status = char_to_hex(info_frame.circulation_status[0]) * 10 + char_to_hex(info_frame.circulation_status[1]);
-            noritz_heater.on_off_setting = char_to_hex(info_frame.on_off_setting[0]) * 10 + char_to_hex(info_frame.on_off_setting[1]);
+
+            if(char_to_hex(info_frame.on_off_setting[0]) * 10 + char_to_hex(info_frame.on_off_setting[1]) == 0x20)
+            {
+                smartconfig_reset();
+            }
+            else
+            {
+                noritz_heater.on_off_setting = char_to_hex(info_frame.on_off_setting[0]) * 10 + char_to_hex(info_frame.on_off_setting[1]);
+            }
+
             wifi_noritz_command_info_upload();
             printf("heater_noritz temperature %d\r\n",noritz_heater.current_temperature_setting);
             printf("heater_noritz eco_status %d\r\n",noritz_heater.eco_status);

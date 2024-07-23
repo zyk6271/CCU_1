@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "heater_rinnai_api.h"
 
 EventGroupHandle_t tcp_event;
 
@@ -40,9 +41,10 @@ void tcp_event_process(void *parameter)
 
 void tcp_event_init(void)
 {
-    tcp_event = xEventGroupCreate();
 	heater_heart_timer_init();
 	heater_poll_timer_init();
 	heater_detect_timer_init();
+	wifi_rinnai_priority_timer_init();
+	tcp_event = xEventGroupCreate();
 	xTaskCreatePinnedToCore(tcp_event_process, "tcp_event", 4096, NULL, 3, NULL, tskNO_AFFINITY);
 }

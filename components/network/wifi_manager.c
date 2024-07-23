@@ -40,6 +40,10 @@ void smartconfig_stop(void)
 {
     smartconfig_start_flag = 0;
     led_network_status_handle(0);
+    esp_wifi_stop();
+    esp_smartconfig_stop();
+    esp_wifi_set_mode(WIFI_MODE_STA);
+    esp_wifi_start();
     esp_wifi_connect();
     ESP_LOGI(TAG, "esp_smartconfig_stop,start to connect router\r\n");
 }
@@ -79,7 +83,6 @@ void smartconfig_start(void)
     ESP_ERROR_CHECK( esp_wifi_disconnect() );
     ESP_ERROR_CHECK( esp_smartconfig_stop() );
     ESP_ERROR_CHECK( esp_smartconfig_set_type(SC_TYPE_ESPTOUCH_V2) );
-    ESP_ERROR_CHECK( esp_smartconfig_fast_mode(1) );
     smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
     ESP_ERROR_CHECK( esp_smartconfig_start(&cfg) );
     smartconfig_wait_timer_start();
@@ -134,6 +137,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         if(smartconfig_start_flag == 0)
         {
             led_network_status_handle(0);
+            esp_wifi_stop();
+            esp_wifi_set_mode(WIFI_MODE_STA);
+            esp_wifi_start();
             esp_wifi_connect();
             ESP_LOGI(TAG, "retry to connect to the AP");
         }
@@ -146,6 +152,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             if(smartconfig_retry_counter++ < 2)
             {
                 led_network_status_handle(0);
+                esp_wifi_stop();
+                esp_wifi_set_mode(WIFI_MODE_STA);
+                esp_wifi_start();
                 esp_wifi_connect();
                 ESP_LOGI(TAG, "retry to connect to the router in smartconfig in %d\n",smartconfig_retry_counter);
             }
@@ -208,13 +217,10 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             ESP_LOGI(TAG, "app key save success\n");
         }
         smartconfig_start_flag = 2;
-        ESP_ERROR_CHECK( esp_wifi_disconnect() );
-        ESP_LOGI(TAG, "esp_wifi_disconnect\n");
-        ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
-        ESP_LOGI(TAG, "esp_wifi_set_config\n");
-        esp_wifi_connect();
-        ESP_LOGI(TAG, "esp_wifi_connect\n");
         smartconfig_wait_timer_stop();
+        esp_wifi_disconnect();
+        esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+        esp_wifi_connect();
     } 
     else if (event_base == SC_EVENT && event_id == SC_EVENT_SEND_ACK_DONE) {
         ESP_LOGI(TAG, "smartconfig over");

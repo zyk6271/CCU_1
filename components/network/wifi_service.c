@@ -52,8 +52,8 @@ void ccu_device_id_convert(void)
 
 void wifi_service_init(void)
 {
+    tcp_client_init();
     ccu_device_id_convert();
     wifi_service_queue_init();
-    tcp_client_init();
     xTaskCreatePinnedToCore(wifi_service_callback, "wifi-service", 4096, NULL, 3, NULL, tskNO_AFFINITY);
 }

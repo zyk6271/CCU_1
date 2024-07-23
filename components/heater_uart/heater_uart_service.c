@@ -310,18 +310,12 @@ void heater_uart_service(void)
 }
 
 
-void heater_uart_service_queue_init(void)
-{
-    heater_queue_in = (unsigned char *)heater_uart_rx_buf;
-    heater_queue_out = (unsigned char *)heater_uart_rx_buf;
-}
-
 void heater_uart_service_callback(void *parameter)
 {
     while(1)
     {
         heater_uart_service();
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
 
@@ -349,8 +343,9 @@ void heater_uart_tx_queue_handle_callback(void *parameter)
 
 void heater_uart_service_init(void)
 {
+    heater_queue_in = (unsigned char *)heater_uart_rx_buf;
+    heater_queue_out = (unsigned char *)heater_uart_rx_buf;
     heater_tx_queue = xQueueCreateStatic(10, sizeof(struct heater_uart_send_msg), heater_tx_queue_buffer, &heater_tx_queue_static);
-    heater_uart_service_queue_init();
     xTaskCreate(heater_uart_tx_queue_handle_callback, "heater_uart_tx_queue_handle", 4096, NULL, 5, NULL);
     xTaskCreate(heater_uart_service_callback, "heater_uart_service", 4096, NULL, 6, NULL);
 }
