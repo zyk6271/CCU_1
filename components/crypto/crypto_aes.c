@@ -43,11 +43,6 @@ void crypto_remote_parse(const unsigned char value[])
     memcpy(Remote_AES_Key, &value[1], 32);
     memcpy(Remote_AES_IV, &value[33], 16);
     printf("crypto_remote_parse\r\n");
-    for(uint8_t i = 0;i < 32; i++)
-    {
-        printf("%02X ",Remote_AES_Key[i]);
-    }
-    printf("\r\n");
 }
 
 int crypto_aes_local_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** output, int *output_length)

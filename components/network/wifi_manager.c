@@ -155,6 +155,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
                 esp_wifi_stop();
                 esp_wifi_set_mode(WIFI_MODE_STA);
                 esp_wifi_start();
+                esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
                 esp_wifi_connect();
                 ESP_LOGI(TAG, "retry to connect to the router in smartconfig in %d\n",smartconfig_retry_counter);
             }
@@ -189,6 +190,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         uint8_t ssid[33] = { 0 };
         uint8_t password[65] = { 0 };
         uint8_t rvd_data[33] = { 0 };
+        extern uint8_t Local_AES_Key[32];
 
         bzero(&wifi_config, sizeof(wifi_config_t));
         memcpy(wifi_config.sta.ssid, evt->ssid, sizeof(wifi_config.sta.ssid));
@@ -205,16 +207,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         ESP_LOGI(TAG, "SSID:%s", ssid);
         ESP_LOGI(TAG, "PASSWORD:%s", password);
         if (evt->type == SC_TYPE_ESPTOUCH_V2) {
-            ESP_ERROR_CHECK( esp_smartconfig_get_rvd_data(rvd_data, sizeof(rvd_data)) );
-            ESP_LOGI(TAG, "RVD_DATA:");
-            for (int i=0; i<32; i++) {
-                printf( "%02x ", rvd_data[i]);
-            }
-            ESP_LOGI(TAG, "\n");
+            esp_smartconfig_get_rvd_data(rvd_data, sizeof(rvd_data));
             storage_save_key_blob("app_key",rvd_data,32);
-            extern uint8_t Local_AES_Key[32];
             memcpy(Local_AES_Key,rvd_data,32);
-            ESP_LOGI(TAG, "app key save success\n");
         }
         smartconfig_start_flag = 2;
         smartconfig_wait_timer_stop();
@@ -223,7 +218,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         esp_wifi_connect();
     } 
     else if (event_base == SC_EVENT && event_id == SC_EVENT_SEND_ACK_DONE) {
-        ESP_LOGI(TAG, "smartconfig over");
+        ESP_LOGI(TAG, "smartconfig done");
         xSemaphoreGive( smartconfig_sem );
         esp_smartconfig_stop();
         smartconfig_start_flag = 0;
@@ -233,6 +228,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 void wifi_interface_init(void)
 {
     smartconfig_sem = xSemaphoreCreateBinary();
+    smartconfig_wait_timer_init();
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -264,5 +260,4 @@ void wifi_interface_init(void)
 
     ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
     ESP_ERROR_CHECK( esp_wifi_start() );
-    smartconfig_wait_timer_init();
 }

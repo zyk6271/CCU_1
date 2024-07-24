@@ -32,7 +32,6 @@ static void heater_uart_rx_task(void *arg)
         const int rxBytes = uart_read_bytes(UART_NUM_0, heater_uart_rx_buf_temp, RX_BUF_SIZE, 1000 / portTICK_PERIOD_MS);
         if (rxBytes > 0) 
         {
-            //printf("heater_uart_rx_task input %d\r\n", rxBytes);
             ESP_LOG_BUFFER_HEXDUMP("rx-task", heater_uart_rx_buf_temp, rxBytes, ESP_LOG_INFO);
             heater_recv_buffer(heater_uart_rx_buf_temp,rxBytes);
         }
