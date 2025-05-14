@@ -5,6 +5,9 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "heater_interface_api.h"
+
+static const char *TAG = "wifi_service";
 
 volatile unsigned char wifi_data_process_buf[PROTOCOL_HEAD + WIFI_DATA_PROCESS_LMT];
 volatile unsigned char wifi_uart_rx_buf[PROTOCOL_HEAD + WIFI_UART_RECV_BUF_LMT];
@@ -87,7 +90,7 @@ void wifi_data_handle(unsigned short offset,uint32_t length)
     uint32_t decrypt_size;
     uint8_t *remote_decrypt_buffer;
     crypto_aes_remote_decrypt(&wifi_data_process_buf[offset + DATA_START],length,&remote_decrypt_buffer,&decrypt_size);
-    printf("data_handle is %02X\r\n",wifi_data_process_buf[offset + CONTROL_TYPE]);
+    ESP_LOGI(TAG,"data_handle is %02X",wifi_data_process_buf[offset + CONTROL_TYPE]);
     switch(wifi_data_process_buf[offset + CONTROL_TYPE])
     {
     case 0x96:
@@ -95,28 +98,28 @@ void wifi_data_handle(unsigned short offset,uint32_t length)
         crypto_aes_local_decrypt(&wifi_data_process_buf[offset + DATA_START],length,&local_decrypt_buffer,&decrypt_size);
         crypto_remote_parse(local_decrypt_buffer);
         free(local_decrypt_buffer);
-        wifi_poll_status_reset();
+        heater_interface_status_reset();
         break;
     case 0x30:
-        wifi_recv_info_upload();
+        heater_interface_error_read();
         break;
     case 0x20:
-        wifi_recv_model_upload();
+        heater_interface_info_read();
         break;
     case 0x21:
-        wifi_recv_temperature_setting(remote_decrypt_buffer[1]);
+        heater_interface_temperature_setting(remote_decrypt_buffer[1]);
         break;
     case 0x22:
-        wifi_recv_eco_setting(remote_decrypt_buffer[1]);
+        heater_interface_eco_setting(remote_decrypt_buffer[1]);
         break;
     case 0x23:
-        wifi_recv_circulation_setting(remote_decrypt_buffer[1]);
+        heater_interface_circulation_setting(remote_decrypt_buffer[1]);
         break;
     case 0x24:
-        wifi_recv_power_setting(remote_decrypt_buffer[1]);
+        heater_interface_power_setting(remote_decrypt_buffer[1]);
         break;
     case 0x25:
-        wifi_recv_priority_setting(remote_decrypt_buffer[1]);
+        heater_interface_priority_setting(remote_decrypt_buffer[1]);
         break;
     default:
         break;

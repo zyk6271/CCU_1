@@ -10,6 +10,9 @@
 #include "wifi_api.h"
 #include "heater_rinnai_api.h"
 #include "heater_noritz_api.h"
+#include "heater_rinnai_bussiness_api.h"
+
+static const char *TAG = "heater_uart";
 
 struct heater_uart_send_msg
 {
@@ -32,11 +35,11 @@ void heater_uart_receive_input(unsigned char value)
 {
     if(1 == heater_queue_out - heater_queue_in)
     {
-        printf("heater_uart_receive queue is full now\r\n");
+        ESP_LOGE(TAG,"heater_uart_receive queue is full now");
     }
     else if((heater_queue_in > heater_queue_out) && ((heater_queue_in - heater_queue_out) >= sizeof(heater_data_process_buf)))
     {
-        printf("heater_uart_receive queue is full now\r\n");
+        ESP_LOGE(TAG,"heater_uart_receive queue is full now");
     }
     else
     {
@@ -178,53 +181,6 @@ unsigned short set_heater_uart_tx_crc(unsigned short length)
     return length;
 }
 
-uint8_t heater_rinnai_data_length_find(uint16_t command)
-{
-    uint8_t length = 0;
-    switch(command)
-    {
-        case 0x2020:
-            length = 4;
-            break;
-        case 0x2030:
-            length = 88;
-            break;
-        case 0x3021:
-        case 0x3022:
-        case 0x3023:
-        case 0x3024:
-        case 0x3025:
-            length = 2;
-            break;
-        default:
-            break;
-    }
-
-    return length;
-}
-
-uint8_t heater_noritz_data_length_find(uint16_t command)
-{
-    uint8_t length = 0;
-    switch(command)
-    {
-        case 0x2020:
-            length = 4;
-            break;
-        case 0x2030:
-        case 0x3021:
-        case 0x3022:
-        case 0x3023:
-        case 0x3024:
-        case 0x3025:
-            length = 75;
-            break;
-        default:
-            break;
-    }
-
-    return length;
-}
 uint8_t heater_uart_data_length_find(uint8_t device_type,uint16_t command)
 {
     if(device_type == 0xFB)
@@ -241,10 +197,10 @@ void heater_uart_service(void)
 {
     static unsigned short rx_in = 0;
     unsigned short offset = 0;
-    unsigned short rx_value_len = 0;            
-    uint16_t rx_command = 0;             
-    uint16_t calc_sum;
-    uint16_t src_sum;
+    unsigned short rx_value_len = 0;                  
+    uint16_t calc_sum = 0;
+    uint16_t src_sum = 0;
+    uint16_t rx_command = 0;
 
     while((rx_in < sizeof(heater_data_process_buf)) && heater_get_queue_total_data() > 0) {
         heater_data_process_buf[rx_in ++] = heater_queue_read_byte();
@@ -260,35 +216,64 @@ void heater_uart_service(void)
         }
 
         if(heater_data_process_buf[offset + HEATER_UART_CMD_0] != HEATER_UART_FRAME_NORITZ_CMD_0 && 
-                heater_data_process_buf[offset + HEATER_UART_CMD_0] != HEATER_UART_FRAME_RINNAI_CMD_0)
+                heater_data_process_buf[offset + HEATER_UART_CMD_0] != HEATER_UART_FRAME_RINNAI_CMD_0 &&
+                    heater_data_process_buf[offset + HEATER_UART_CMD_0] != HEATER_UART_FRAME_RINNAI_BUSSINESS_CMD_0)
          {
             offset ++;
             continue;
         }
 
-        if(heater_data_process_buf[offset + HEATER_UART_CMD_1] != HEATER_UART_FRAME_CMD_1) {
+        if(heater_data_process_buf[offset + HEATER_UART_CMD_1] != HEATER_UART_FRAME_CMD_1 &&
+            heater_data_process_buf[offset + HEATER_UART_CMD_1] != HEATER_UART_FRAME_BUSSINESS_CMD_1)
+        {
             offset ++;
             continue;
         }
 
-        rx_command = heater_data_process_buf[offset + HEATER_UART_CMD_2] << 8 | heater_data_process_buf[offset + HEATER_UART_CMD_3];
-        rx_value_len = heater_uart_data_length_find(heater_data_process_buf[offset + HEATER_UART_CMD_0],rx_command);
+        if(heater_data_process_buf[offset + HEATER_UART_CMD_0] == HEATER_UART_FRAME_RINNAI_BUSSINESS_CMD_0)
+        {
 
-        if(heater_data_process_buf[offset + rx_value_len + 5] != HEATER_UART_FRAME_END_EXT) {
-            offset ++;
-            continue;
+            rx_value_len = heater_rinnai_bussiness_data_length_find((heater_data_process_buf[offset + HEATER_UART_CMD_2] * 0x100000000) |
+                            heater_data_process_buf[offset + HEATER_UART_CMD_3] << 24 | heater_data_process_buf[offset + HEATER_UART_CMD_4] << 16 | 
+                            heater_data_process_buf[offset + HEATER_UART_CMD_5] << 8 | heater_data_process_buf[offset + HEATER_UART_CMD_6]);
+
+            if(heater_data_process_buf[offset + rx_value_len + 8] != HEATER_UART_FRAME_END_EXT) {
+                offset ++;
+                continue;
+            }
+
+            if(heater_data_process_buf[offset + rx_value_len + 11] != HEATER_UART_FRAME_END_CR) {
+                offset ++;
+                continue;
+            }
+
+
+            calc_sum = heater_get_check_sum((unsigned char *)heater_data_process_buf + offset + 1,7 + rx_value_len + 1);
+            src_sum = (heater_data_process_buf[offset + rx_value_len + 9] << 8 | heater_data_process_buf[offset + rx_value_len + 10]);
+        }
+        else
+        {
+            rx_command = heater_data_process_buf[offset + HEATER_UART_CMD_2] << 8 | heater_data_process_buf[offset + HEATER_UART_CMD_3];
+            rx_value_len = heater_uart_data_length_find(heater_data_process_buf[offset + HEATER_UART_CMD_0],rx_command);
+
+            if(heater_data_process_buf[offset + rx_value_len + 5] != HEATER_UART_FRAME_END_EXT) {
+                offset ++;
+                continue;
+            }
+
+            if(heater_data_process_buf[offset + rx_value_len + 8] != HEATER_UART_FRAME_END_CR) {
+                offset ++;
+                continue;
+            }
+
+            calc_sum = heater_get_check_sum((unsigned char *)heater_data_process_buf + offset + 1,4 + rx_value_len + 1);
+            src_sum = (heater_data_process_buf[offset + rx_value_len + 6] << 8 | heater_data_process_buf[offset + rx_value_len + 7]);
         }
 
-        if(heater_data_process_buf[offset + rx_value_len + 8] != HEATER_UART_FRAME_END_CR) {
-            offset ++;
-            continue;
-        }
 
-        calc_sum = heater_get_check_sum((unsigned char *)heater_data_process_buf + offset + 1,4 + rx_value_len + 1);
-        src_sum = (heater_data_process_buf[offset + rx_value_len + 6] << 8 | heater_data_process_buf[offset + rx_value_len + 7]);
         if( calc_sum != src_sum) {
             //校验出错
-            printf("crc error (calc:0x%X  but data:0x%X)\r\n",calc_sum,src_sum);
+            ESP_LOGI(TAG,"crc error (calc:0x%X  but data:0x%X)",calc_sum,src_sum);
             offset ++;
             continue;
         }
@@ -297,9 +282,10 @@ void heater_uart_service(void)
             break;
         }
 
-        printf("recv frame success,rx_command is %04X,rx_value_len is %d,checksum %04X\r\n",rx_command,rx_value_len,calc_sum);
+        ESP_LOGI(TAG,"recv frame success,rx_value_len is %d,checksum %04X",rx_value_len,calc_sum);
         heater_rinnai_data_handle(offset);
         heater_noritz_data_handle(offset);
+        heater_rinnai_bussiness_data_handle(offset);
         offset += rx_value_len;
     }
 
@@ -336,7 +322,7 @@ void heater_uart_tx_queue_handle_callback(void *parameter)
     {
         xQueueReceive(heater_tx_queue, (void*)&msg_ptr, portMAX_DELAY);
         uart_write_bytes(UART_NUM_0, msg_ptr.data_ptr, msg_ptr.data_size);
-        // ESP_LOG_BUFFER_HEXDUMP("heater_uart_tx_queue", msg_ptr.data_ptr, msg_ptr.data_size, ESP_LOG_INFO);
+        //ESP_LOG_BUFFER_HEXDUMP("heater_uart_tx_queue", msg_ptr.data_ptr, msg_ptr.data_size, ESP_LOG_INFO);
         vTaskDelay(pdMS_TO_TICKS(1200));
     }
 }

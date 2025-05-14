@@ -1,4 +1,8 @@
+#include "esp_log.h"
+
 #define MCU_API_GLOBAL
+
+static const char *TAG = "mcu_api";
 
 #include "network_typedef.h"
 
@@ -156,12 +160,12 @@ void wifi_uart_receive_input(unsigned char value)
 {
     if(1 == wifi_queue_out - wifi_queue_in)
     {
-        printf("uart_receive queue is full now\r\n");
+        ESP_LOGE(TAG,"uart_receive queue is full now");
         //数据队列满
     }
     else if((wifi_queue_in > wifi_queue_out) && ((wifi_queue_in - wifi_queue_out) >= sizeof(wifi_data_process_buf)))
     {
-        printf("uart_receive queue is full now\r\n");
+        ESP_LOGE(TAG,"uart_receive queue is full now");
         //数据队列满
     }
     else
@@ -226,7 +230,7 @@ void wifi_uart_service(void)
         check_sum = wifi_get_check_sum((unsigned char *)wifi_data_process_buf + offset,PROTOCOL_HEAD + rx_value_len);
         if( check_sum != wifi_data_process_buf[offset + DATA_LENGTH + rx_value_len + 1]) {
             //校验出错
-            printf("crc error (crc:0x%X  but data:0x%X)\r\n",check_sum,wifi_data_process_buf[offset + DATA_LENGTH + rx_value_len + 1]);
+            ESP_LOGE(TAG,"crc error (crc:0x%X  but data:0x%X)",check_sum,wifi_data_process_buf[offset + DATA_LENGTH + rx_value_len + 1]);
             offset += 2;
             continue;
         }

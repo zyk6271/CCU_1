@@ -9,10 +9,13 @@
  */
 #include "freertos/FreeRTOS.h"
 #include "aes/esp_aes.h"
+#include "esp_log.h"
 
 #include "string.h"
 #include "crypto_aes.h"
 #include "storage.h"
+
+static const char *TAG = "crypto";
 
 esp_aes_context aes_handle;
 
@@ -42,10 +45,10 @@ void crypto_remote_parse(const unsigned char value[])
 {
     memcpy(Remote_AES_Key, &value[1], 32);
     memcpy(Remote_AES_IV, &value[33], 16);
-    printf("crypto_remote_parse\r\n");
+    ESP_LOGI(TAG,"crypto_remote_parse");
 }
 
-int crypto_aes_local_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** output, int *output_length)
+int crypto_aes_local_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** output, uint32_t *output_length)
 {
     int result = 0;
 
@@ -77,7 +80,7 @@ int crypto_aes_local_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** ou
     return result;
 }
 
-int crypto_aes_local_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **output,int *output_length)
+int crypto_aes_local_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **output,uint32_t *output_length)
 {
     int result = 0;
 
@@ -95,7 +98,7 @@ int crypto_aes_local_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **
     return result;
 }
 
-int crypto_aes_remote_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** output, int *output_length)
+int crypto_aes_remote_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** output, uint32_t *output_length)
 {
     int result = 0;
 
@@ -127,7 +130,7 @@ int crypto_aes_remote_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** o
     return result;
 }
 
-int crypto_aes_remote_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **output,int *output_length)
+int crypto_aes_remote_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **output,uint32_t *output_length)
 {
     int result = 0;
 

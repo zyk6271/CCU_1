@@ -4,6 +4,9 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "heater_rinnai_api.h"
+#include "esp_log.h"
+
+static const char *TAG = "tcp_event";
 
 EventGroupHandle_t tcp_event;
 
@@ -27,12 +30,12 @@ void tcp_event_process(void *parameter)
 		event = tcp_event_recv(TCP_EVENT_LINK_UP | TCP_EVENT_LINK_DOWN ,portMAX_DELAY);
 		if(event & TCP_EVENT_LINK_UP)
 		{
-			printf("TCP_EVENT_LINK_UP\r\n");
+			ESP_LOGI(TAG,"TCP_EVENT_LINK_UP");
 			wifi_heater_common_key_request();//heart
 		}
 		else if(event & TCP_EVENT_LINK_DOWN)
 		{
-			printf("TCP_EVENT_LINK_DOWN\r\n");
+			ESP_LOGI(TAG,"TCP_EVENT_LINK_DOWN");
 			vTaskDelay(pdMS_TO_TICKS(1000));
 			tcp_event_send(TCP_CONNECT_RESET);//发送重连请求
 		}

@@ -45,7 +45,7 @@ void smartconfig_stop(void)
     esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_start();
     esp_wifi_connect();
-    ESP_LOGI(TAG, "esp_smartconfig_stop,start to connect router\r\n");
+    ESP_LOGI(TAG, "esp_smartconfig_stop,start to connect router");
 }
 
 void smartconfig_wait_timer_callback(void* arg)
@@ -86,7 +86,7 @@ void smartconfig_start(void)
     smartconfig_start_config_t cfg = SMARTCONFIG_START_CONFIG_DEFAULT();
     ESP_ERROR_CHECK( esp_smartconfig_start(&cfg) );
     smartconfig_wait_timer_start();
-    ESP_LOGI(TAG, "esp_smartconfig_start\r\n");
+    ESP_LOGI(TAG, "esp_smartconfig_start");
 }
 
 void smartconfig_reset(void)
@@ -109,7 +109,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         {
             config_flag = 0;
         }
-        ESP_LOGI(TAG, "wifi_mode is %ld\r\n",config_flag);
+        ESP_LOGI(TAG, "wifi_mode is %ld",config_flag);
         if(config_flag)
         {
             uint8_t ssid_temp[33];
@@ -124,7 +124,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             memcpy(wifi_config.sta.ssid, ssid_temp, ssid_length);
             memcpy(wifi_config.sta.password, password_temp, password_length);
             ESP_ERROR_CHECK( esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
-            ESP_LOGI(TAG, "esp_wifi_connect\r\n");
+            ESP_LOGI(TAG, "esp_wifi_connect");
             esp_wifi_connect();
         }
         else
@@ -157,11 +157,11 @@ static void event_handler(void* arg, esp_event_base_t event_base,
                 esp_wifi_start();
                 esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
                 esp_wifi_connect();
-                ESP_LOGI(TAG, "retry to connect to the router in smartconfig in %d\n",smartconfig_retry_counter);
+                ESP_LOGI(TAG, "retry to connect to the router in smartconfig in %d",smartconfig_retry_counter);
             }
             else
             {
-                ESP_LOGI(TAG, "restart smartconfig\n");
+                ESP_LOGI(TAG, "restart smartconfig");
                 smartconfig_start();
             }
         }
@@ -210,7 +210,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             esp_smartconfig_get_rvd_data(rvd_data, sizeof(rvd_data));
             storage_save_key_blob("app_key",rvd_data,32);
             memcpy(Local_AES_Key,rvd_data,32);
+            ESP_LOG_BUFFER_HEXDUMP("Local_AES_Key", rvd_data, 32, ESP_LOG_INFO);
         }
+
         smartconfig_start_flag = 2;
         smartconfig_wait_timer_stop();
         esp_wifi_disconnect();

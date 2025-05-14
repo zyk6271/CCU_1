@@ -6,6 +6,7 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "storage.h"
+#include "esp_log.h"
 
 #define STORAGE_NAMESPACE "storage"
 
@@ -69,7 +70,6 @@ esp_err_t storage_read_key_blob(char* key,uint8_t* value,uint32_t *length)
 
     if (required_size == 0) 
     {
-        printf("storage_read_app_key empty!\n");
         err = ESP_ERR_NVS_NOT_FOUND;
     } 
     else 

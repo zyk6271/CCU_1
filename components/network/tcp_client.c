@@ -11,10 +11,12 @@
 #include "wifi_service.h"
 #include "tcp_client.h"
 
+static const char *TAG = "tcp_client";
+
 #define HOST_BUFSZ	 1024
 //#define HOST_IP     "smartdevice-uat.towngas-uat.com"
-// #define HOST_IP     "smartdevice-dev.towngas.com"
-#define HOST_IP     "smartdevice.towngas.com"
+ #define HOST_IP     "smartdevice-dev.towngas.com"
+//#define HOST_IP     "smartdevice.towngas.com"
 #define HOST_PORT    10020
 
 static int already_connected = 0;
@@ -47,20 +49,20 @@ void tcp_client_entry(void* parameter)
     recv_data = calloc(1, HOST_BUFSZ);
     if (recv_data == NULL)
     {
-        printf("No memory\n");
+        ESP_LOGE(TAG,"No memory");
         return;
     }
-	printf("tcp_client_entry init ok\n");
+	ESP_LOGI(TAG,"tcp_client_entry init ok");
 
     tcp_event_recv(TCP_EVENT_WIFI_CONNECTED,portMAX_DELAY);
-	printf("__WAIT_WIFI ok\n");
+	ESP_LOGI(TAG,"__WAIT_WIFI ok");
 
 __CONNECT:
     /* 通过函数入口参数url获得host地址（如果是域名，会做域名解析） */
     host = gethostbyname(HOST_IP);
 	if (host == NULL)
     {
-		printf("gethostbyname fail\n");
+		ESP_LOGE(TAG,"gethostbyname fail");
 		goto __RESET_CONNECT;
 	}
 	else
@@ -76,7 +78,7 @@ __CONNECT:
 	sock = socket(AF_INET, SOCK_STREAM, 0);
     if(sock< 0)
     {
-        printf("Socket error\n");
+        ESP_LOGE(TAG,"Socket error");
         goto __RESET_CONNECT;
     }
 
@@ -87,12 +89,12 @@ __CONNECT:
 		{		
 			if(tcp_event_recv(TCP_CONNECT_RESET,0) & TCP_CONNECT_RESET)
 			{
-				printf("接收到tcp重连请求事件!!!");
+				ESP_LOGE(TAG,"接收到tcp重连请求事件!!!");
 				goto __RESET_CONNECT;
 			}
 			if(sock < 0)
 			{
-				printf("需要重连tcp!!!");
+				ESP_LOGE(TAG,"需要重连tcp!!!");
 				goto __RESET_CONNECT;
 			}
 			//要保证sock是>= 0
@@ -106,7 +108,7 @@ __CONNECT:
 			bytes_received = recv(sock, recv_data, HOST_BUFSZ - 1, 0);
 			if(bytes_received <= 0)
 			{
-				printf("服务端异常,断开重连 bytes_received=%d",bytes_received);
+				ESP_LOGE(TAG,"服务端异常,断开重连 bytes_received=%d",bytes_received);
 				goto __RESET_CONNECT;
 			}
 			else
@@ -121,7 +123,7 @@ __CONNECT:
 			error_count ++;
 			if(error_count >= 20)
 			{
-				printf("连接服务器错误!!!");
+				ESP_LOGI(TAG,"连接服务器错误!!!");
 				error_count = 0;
 			}
         	vTaskDelay(pdMS_TO_TICKS(1000));
@@ -132,7 +134,7 @@ __CONNECT:
 		{
 			error_count = 0;
 			already_connected = 1;
-			printf("连接服务器成功!!\r\n");
+			ESP_LOGI(TAG,"连接服务器成功!!");
 			tcp_event_send(TCP_EVENT_LINK_UP);//设备上线
 		}
         vTaskDelay(pdMS_TO_TICKS(200));
@@ -153,7 +155,7 @@ uint8_t tcp_client_send(uint8_t *send_buf,size_t len)
 	int err = send(sock,send_buf,len,0);
 	if(err < 0)
 	{
-		printf("send fail,err code %d\r\n",err);
+		ESP_LOGE(TAG,"send fail,err code %d",err);
 		tcp_event_send(TCP_CONNECT_RESET);
 	}
 

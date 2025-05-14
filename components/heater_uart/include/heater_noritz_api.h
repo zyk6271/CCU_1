@@ -24,7 +24,7 @@ typedef struct
     uint8_t eco_status[2];
     uint8_t circulation_status[2];
     uint8_t on_off_setting[2];
-}noritz_state_info_frame_t;
+}heater_noritz_uart_frame_t;
 
 typedef struct
 {
@@ -52,8 +52,9 @@ typedef struct
     uint8_t eco_status;
     uint8_t circulation_status;
     uint8_t on_off_setting;
-}noritz_heater_info_t;
+}heater_noritz_info_t;
 
+uint8_t heater_noritz_data_length_find(uint16_t command);
 void heater_noritz_poll_status_resset(void);
 void heater_noritz_info_read(void);
 void heater_noritz_error_read(void);

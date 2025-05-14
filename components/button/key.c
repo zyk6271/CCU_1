@@ -6,7 +6,10 @@
 #include "key.h"
 #include "led.h"
 #include "esp_timer.h"
+#include "esp_log.h"
 #include "wifi_manager.h"
+
+static const char *TAG = "key";
 
 Button_t reset_key;
 
@@ -21,11 +24,11 @@ uint8_t reset_key_level_get_level(void)
     return gpio_get_level(RST_KEY_PIN);
 }
 
-void reset_key_long_press_callback(void)
+void reset_key_long_press_callback(void *parameter)
 {
     if(reset_key_long_cnt < 40)
     {
-        printf("reset_key_long_cnt increase %d\r\n",reset_key_long_cnt);
+        ESP_LOGI(TAG,"reset_key_long_cnt increase %d",reset_key_long_cnt);
         reset_key_long_cnt++;
     }
     else
@@ -34,15 +37,15 @@ void reset_key_long_press_callback(void)
         {
             reset_key_long_click = 1;
             smartconfig_reset();
-            printf("reset_key_long_press_click\r\n");
+            ESP_LOGI(TAG,"reset_key_long_press_click");
         }
     }
 }
-void reset_key_long_free_callback(void)
+void reset_key_long_free_callback(void *parameter)
 {
     reset_key_long_cnt = 0;
     reset_key_long_click = 0;
-    printf("reset_key_long_free_callback\r\n");
+    ESP_LOGI(TAG,"reset_key_long_free_callback");
 }
 
 void key_thread_callback(void *parameter)
