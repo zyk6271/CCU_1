@@ -513,8 +513,7 @@ void heater_rinnai_bussiness_data_handle(uint8_t offset)
                             heater_rinnai_bussiness_info.error_record[4],heater_rinnai_bussiness_info.error_record[5],heater_rinnai_bussiness_info.error_record[6],
                                 heater_rinnai_bussiness_info.error_record[7],heater_rinnai_bussiness_info.error_record[8]);
             break;
-        case 0x33304530
-        31:
+        case 0x3330453031:
             heater_rinnai_bussiness_info.combustion_status = char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 1]);
             ESP_LOGI(TAG,"heater_rinnai_bussiness_info combustion_status is [%d]",heater_rinnai_bussiness_info.combustion_status);
             break;
