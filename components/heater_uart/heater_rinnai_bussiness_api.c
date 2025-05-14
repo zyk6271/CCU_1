@@ -12,10 +12,10 @@
 
 static const char *TAG = "heater_rinnai_bussiness";
 
-extern uint32_t send_counter;
+static heater_rinnai_bussiness_info_t heater_rinnai_bussiness_info = {0};
+static heater_rinnai_bussiness_info_t heater_rinnai_bussiness_info_last = {0};
 
-heater_rinnai_bussiness_info_t heater_rinnai_bussiness_info = {0};
-heater_rinnai_bussiness_info_t heater_rinnai_bussiness_info_last = {0};
+static uint8_t heater_rinnai_bussiness_temperature_convert_table[] = {60,85,55,80,50,75,45,70,45,88,45,65,45,65,45,65};
 
 uint8_t heater_rinnai_bussiness_data_length_find(uint64_t command)
 {
@@ -286,7 +286,7 @@ void wifi_rinnai_bussiness_command_model_upload(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = heater_rinnai_bussiness_info.type;
     plain_buf[2] = heater_rinnai_bussiness_info.model;
 
@@ -310,63 +310,22 @@ void wifi_rinnai_bussiness_command_info_upload(void)
     heater_rinnai_bussiness_info_t heater_rinnai_bussiness_info_temp = {0};
     memcpy(&heater_rinnai_bussiness_info_temp,&heater_rinnai_bussiness_info,sizeof(heater_rinnai_bussiness_info_t));
 
-    heater_rinnai_bussiness_info_temp.total_flow_rate = (uint32_t)(heater_rinnai_bussiness_info_temp.total_flow_rate * 0.01);
+    heater_rinnai_bussiness_info_temp.total_flow_rate = heater_rinnai_bussiness_info_temp.total_flow_rate * 0.01;
     heater_rinnai_bussiness_info_temp.power_on_time = heater_rinnai_bussiness_info_temp.power_on_time * 6;
     heater_rinnai_bussiness_info_temp.combustion_time = heater_rinnai_bussiness_info_temp.combustion_time * 100;
-    switch(heater_rinnai_bussiness_info_temp.current_temperature_setting)
+    heater_rinnai_bussiness_info_temp.hot_water_consumption = heater_rinnai_bussiness_info_temp.total_flow_rate * 0.25 + heater_rinnai_bussiness_info_last.hot_water_consumption; 
+    heater_rinnai_bussiness_info_temp.current_temperature_setting = heater_rinnai_bussiness_temperature_convert_table[heater_rinnai_bussiness_info_temp.current_temperature_setting];
+    if(heater_rinnai_bussiness_info_temp.combustion_status)
     {
-        case 0:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 60;
-            break;
-        case 1:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 85;
-            break;
-        case 2:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 55;
-            break;
-        case 3:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 80;
-            break;
-        case 4:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 50;
-            break;
-        case 5:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 75;
-            break;
-        case 6:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 45;
-            break;
-        case 7:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 70;
-            break;
-        case 8:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 45;
-            break;
-        case 9:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 88;
-            break;
-        case 10:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 45;
-            break;
-        case 11:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 65;
-            break;
-        case 12:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 45;
-            break;
-        case 13:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 65;
-            break;
-        case 14:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 45;
-            break;
-        case 15:
-            heater_rinnai_bussiness_info_temp.current_temperature_setting = 65;
-            break;
-        default:
-            break;
+        if(heater_rinnai_bussiness_info_temp.current_temperature_setting == 80)
+        {
+            heater_rinnai_bussiness_info_temp.gas_consumption = (((heater_rinnai_bussiness_info_temp.total_flow_rate / 5.5 * 88.2) + 37.8) * 1000 / 240 / 128) + heater_rinnai_bussiness_info_last.gas_consumption;
+        }
+        else
+        {
+            heater_rinnai_bussiness_info_temp.gas_consumption = (((heater_rinnai_bussiness_info_temp.total_flow_rate / 10 * 88.2) + 37.8) * 1000 / 240 / 128) + heater_rinnai_bussiness_info_last.gas_consumption;
+        }
     }
-
 
     //skip duplication
     if(memcmp(&heater_rinnai_bussiness_info_temp,&heater_rinnai_bussiness_info_last,sizeof(heater_rinnai_bussiness_info_t)) == 0)
@@ -379,11 +338,11 @@ void wifi_rinnai_bussiness_command_info_upload(void)
     }
 
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = heater_rinnai_bussiness_info_temp.error;
 
-    plain_buf[2] = heater_rinnai_bussiness_info_temp.total_flow_rate & 0xFF;
-    plain_buf[3] = (heater_rinnai_bussiness_info_temp.total_flow_rate >> 8) & 0xFF;
+    plain_buf[2] = (uint32_t)(heater_rinnai_bussiness_info_temp.total_flow_rate * 10) & 0xFF;
+    plain_buf[3] = ((uint32_t)(heater_rinnai_bussiness_info_temp.total_flow_rate * 10) >> 8) & 0xFF;
 
     plain_buf[4] = heater_rinnai_bussiness_info_temp.flow_rate_of_heat_exchanger & 0xFF;
     plain_buf[5] = (heater_rinnai_bussiness_info_temp.flow_rate_of_heat_exchanger >> 8) & 0xFF;
@@ -418,12 +377,15 @@ void wifi_rinnai_bussiness_command_info_upload(void)
     plain_buf[28] = heater_rinnai_bussiness_info_temp.error_record[7];
 
     plain_buf[29] = heater_rinnai_bussiness_info_temp.gas_overflow;
-    plain_buf[30] = heater_rinnai_bussiness_info_temp.gas_consumption & 0xFF;
-    plain_buf[31] = (heater_rinnai_bussiness_info_temp.gas_consumption >> 8) & 0xFF;
+    if(heater_rinnai_bussiness_info_temp.combustion_status)
+    {
+        plain_buf[30] = ((uint32_t)heater_rinnai_bussiness_info_temp.gas_consumption) & 0xFF;
+        plain_buf[31] = ((uint32_t)(heater_rinnai_bussiness_info_temp.gas_consumption) >> 8) & 0xFF;
+    }
 
     plain_buf[32] = heater_rinnai_bussiness_info_temp.hot_water_overflow;
-    plain_buf[33] = heater_rinnai_bussiness_info_temp.hot_water_consumption & 0xFF;
-    plain_buf[34] = (heater_rinnai_bussiness_info_temp.hot_water_consumption >> 8) & 0xFF;
+    plain_buf[33] = ((uint32_t)heater_rinnai_bussiness_info_temp.hot_water_consumption) & 0xFF;
+    plain_buf[34] = ((uint32_t)(heater_rinnai_bussiness_info_temp.hot_water_consumption) >> 8) & 0xFF;
 
     plain_buf[35] = heater_rinnai_bussiness_info_temp.combustion_status;
     plain_buf[36] = heater_rinnai_bussiness_info_temp.current_priority_location;
@@ -468,7 +430,8 @@ void heater_rinnai_bussiness_data_handle(uint8_t offset)
                                                                         char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 1] ) |
                                                                             char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 2]) << 12 |
                                                                                 char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 3]) << 8;
-            ESP_LOGI(TAG,"heater_rinnai_bussiness_info total_flow_rate is [%ld]",heater_rinnai_bussiness_info.total_flow_rate);
+
+            ESP_LOGI(TAG,"heater_rinnai_bussiness_info total_flow_rate is [%f]",heater_rinnai_bussiness_info.total_flow_rate);
             break;
         case 0x3330303032:
             heater_rinnai_bussiness_info.fan_speed = char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START]) << 4 |

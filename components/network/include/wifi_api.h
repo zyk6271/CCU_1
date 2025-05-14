@@ -12,6 +12,7 @@
 
 #include "stdint.h"
 
+uint8_t tcp_send_count_read(void);
 void wifi_heater_common_key_request(void);
 void wifi_heater_common_heart_upload(void);
 void heater_heart_timer_start(void);

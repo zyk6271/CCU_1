@@ -5,7 +5,7 @@ typedef struct
     uint8_t type;
     uint8_t model;
     uint8_t error;
-    uint32_t total_flow_rate;
+    double total_flow_rate;
     uint32_t flow_rate_of_heat_exchanger;
     uint32_t flow_rate_of_circulation_pump;
     uint32_t fan_speed;
@@ -17,9 +17,9 @@ typedef struct
     uint8_t heat_exchanger_temperature;
     uint8_t error_record[9];
     uint8_t gas_overflow;
-    uint32_t gas_consumption;
+    double gas_consumption;
     uint8_t hot_water_overflow;
-    uint32_t hot_water_consumption;
+    double hot_water_consumption;
     uint8_t combustion_status;
     uint8_t current_priority_location;
     uint8_t current_temperature_setting;

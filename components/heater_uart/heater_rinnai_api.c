@@ -12,15 +12,13 @@
 
 static const char *TAG = "heater_rinnai";
 
-extern uint32_t send_counter;
-
 uint16_t last_combustion_status = 1;
 
-heater_rinnai_info_t heater_rinnai_info = 
+static heater_rinnai_info_t heater_rinnai_info = 
 {
     .current_priority_location = 0x02,
 };
-heater_rinnai_info_t heater_rinnai_info_last = {0};
+static heater_rinnai_info_t heater_rinnai_info_last = {0};
 
 esp_timer_handle_t rinnai_priority_timer;
 
@@ -175,7 +173,7 @@ void wifi_rinnai_command_model_upload(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = heater_rinnai_info.type;
     plain_buf[2] = heater_rinnai_info.model;
 
@@ -195,7 +193,7 @@ void wifi_rinnai_temperature_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
@@ -214,7 +212,7 @@ void wifi_rinnai_eco_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
@@ -233,7 +231,7 @@ void wifi_rinnai_circulation_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,41,&encrypt_ptr,&encrypt_size);
@@ -252,7 +250,7 @@ void wifi_rinnai_power_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
@@ -271,7 +269,7 @@ void wifi_rinnai_priority_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
@@ -356,7 +354,7 @@ void wifi_rinnai_command_info_upload(void)
         memcpy(&heater_rinnai_info_last,&heater_rinnai_info_temp,sizeof(heater_rinnai_info_t));
     }
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = heater_rinnai_info_temp.error;
 
     plain_buf[2] = heater_rinnai_info_temp.total_flow_rate & 0xFF;

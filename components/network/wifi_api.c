@@ -24,10 +24,15 @@ esp_timer_handle_t heater_poll_upload_timer;
 esp_timer_handle_t heater_poll_timer;
 esp_timer_handle_t heater_detect_timer;
 
+uint8_t tcp_send_count = 0x01;
 uint8_t heater_detect_done = 0;
-uint8_t send_counter = 0x01;
 
 extern uint8_t smartconfig_start_flag;
+
+uint8_t tcp_send_count_read(void)
+{
+    return tcp_send_count++;
+}
 
 void wifi_heater_common_key_request(void)
 {
@@ -57,7 +62,7 @@ void wifi_heater_common_heart_upload(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);

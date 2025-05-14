@@ -11,10 +11,8 @@
 
 static const char *TAG = "heater_noritz";
 
-extern uint32_t send_counter;
-
-heater_noritz_info_t heater_noritz_info;
-heater_noritz_info_t heater_noritz_info_last;
+static heater_noritz_info_t heater_noritz_info = {0};
+static heater_noritz_info_t heater_noritz_info_last = {0};
 
 uint8_t heater_noritz_data_length_find(uint16_t command)
 {
@@ -164,7 +162,7 @@ void wifi_noritz_command_model_upload(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = heater_noritz_info.type;
     plain_buf[2] = heater_noritz_info.model;
 
@@ -184,7 +182,7 @@ void wifi_noritz_temperature_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
@@ -203,7 +201,7 @@ void wifi_noritz_eco_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
@@ -222,7 +220,7 @@ void wifi_noritz_circulation_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,41,&encrypt_ptr,&encrypt_size);
@@ -241,7 +239,7 @@ void wifi_noritz_power_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
@@ -260,7 +258,7 @@ void wifi_noritz_priority_setting_response(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
     crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
@@ -298,7 +296,7 @@ void wifi_noritz_command_info_upload(void)
         memcpy(&heater_noritz_info_last,&heater_noritz_info_temp,sizeof(heater_noritz_info_t));
     }
 
-    plain_buf[0] = send_counter++;
+    plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = heater_noritz_info_temp.error;
     plain_buf[2] = heater_noritz_info_temp.total_flow_rate & 0xFF;
     plain_buf[3] = (heater_noritz_info_temp.total_flow_rate >> 8) & 0xFF;
