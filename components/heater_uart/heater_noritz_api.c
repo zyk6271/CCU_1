@@ -84,7 +84,7 @@ void heater_noritz_temperature_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
+    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void heater_noritz_eco_write(uint8_t value)
@@ -101,7 +101,7 @@ void heater_noritz_eco_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
+    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void heater_noritz_circulation_write(uint8_t value)
@@ -118,7 +118,7 @@ void heater_noritz_circulation_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
+    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void heater_noritz_power_write(uint8_t value)
@@ -135,7 +135,7 @@ void heater_noritz_power_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
+    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void heater_noritz_priority_write(uint8_t value)
@@ -152,7 +152,7 @@ void heater_noritz_priority_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
+    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void wifi_noritz_command_model_upload(void)
