@@ -19,6 +19,8 @@
 #include "wifi_manager.h"
 #include "heater_interface_api.h"
 
+static const char *TAG = "dishwasher_modbus";
+
 #define MB_TXD_PIN (GPIO_NUM_21)
 #define MB_RXD_PIN (GPIO_NUM_20)
 #define MB_RE_PIN  (GPIO_NUM_10)
@@ -26,9 +28,6 @@
 #define MB_PORT_NUM     (UART_NUM_0)   // Number of UART port used for Modbus connection
 #define MB_DEV_SPEED    (9600)  // The communication speed of the UART
 
-static const char *TAG = "dishwasher_modbus";
-
-#define STR(fieldname) ((const char*)( fieldname ))
 #define OPTS(min_val, max_val, step_val) { .opt1 = min_val, .opt2 = max_val, .opt3 = step_val }
 
 // Enumeration of modbus device addresses accessed by master device
@@ -62,7 +61,7 @@ const mb_parameter_descriptor_t device_parameters[] = {
     },
 };
 
-static uint8_t modbus_read_value[88] = {0};
+static uint8_t modbus_read_value[512] = {0};
 const uint16_t num_device_parameters = (sizeof(device_parameters)/sizeof(device_parameters[0]));
 
 void dish_washer_info_upload(void)
@@ -101,7 +100,7 @@ esp_err_t dish_washer_modbus_poll(void)
     int cid = 0;
     uint8_t type = 0;  
     esp_err_t err = ESP_OK;
-    uint8_t modbus_read_value_temp[88] = {0};             
+    uint8_t modbus_read_value_temp[512] = {0};             
 
     const mb_parameter_descriptor_t* param_descriptor = NULL;
     err = mbc_master_get_cid_info(modbus_handle, cid, &param_descriptor);
@@ -112,13 +111,13 @@ esp_err_t dish_washer_modbus_poll(void)
         {
             ESP_LOGI(TAG, "modbus poll read success\r\n");
             //ESP_LOG_BUFFER_HEXDUMP("modbus_read_value_temp", modbus_read_value_temp, 88, ESP_LOG_INFO);
-            if(memcmp(modbus_read_value_temp,modbus_read_value,sizeof(modbus_read_value)) == 0)
+            if(memcmp(modbus_read_value_temp,modbus_read_value,88) == 0)
             {
                 ESP_LOGI(TAG, "holding register value no change\r\n");
             }
             else
             {
-                memcpy(modbus_read_value,modbus_read_value_temp,sizeof(modbus_read_value));
+                memcpy(modbus_read_value,modbus_read_value_temp,88);
                 dish_washer_info_upload();
                 ESP_LOGI(TAG, "holding register value has change\r\n");
             }
