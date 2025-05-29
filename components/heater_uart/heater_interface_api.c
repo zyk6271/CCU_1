@@ -9,9 +9,10 @@
 #include "heater_rinnai_bussiness_api.h"
 #include "heater_noritz_api.h"
 #include "heater_interface_api.h"
+#include "dishwasher_modbus_api.h"
 #include "esp_log.h"
 
-uint8_t device_type = HEATER_TYPE_HOME;
+uint8_t device_type = MODBUS_TYPE_DISHWASHER;
 
 void hearter_device_type_set(uint8_t type)
 {
@@ -35,6 +36,9 @@ void heater_interface_status_reset(void)
             break;
         case HEATER_TYPE_RINNAL_BUSINESS:
             heater_rinnai_bussiness_poll_status_resset();
+            break;
+        case MODBUS_TYPE_DISHWASHER:
+            dishwasher_poll_status_reset();
             break;
         default:
             break;

@@ -6,6 +6,7 @@ enum heater_type
     HEATER_TYPE_NORITZ_HOME,
     HEATER_TYPE_RINNAI_HOME,
     HEATER_TYPE_RINNAL_BUSINESS,
+    MODBUS_TYPE_DISHWASHER,
 };
 
 void hearter_device_type_set(uint8_t type);

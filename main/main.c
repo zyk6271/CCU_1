@@ -11,11 +11,12 @@
 #include "wifi_manager.h"
 #include "key.h"
 #include "heater_uart.h"
+#include "dishwasher_modbus_api.h"
 
 static const char *TAG = "main";
 
 const uint8_t fw_main_ver = 0x01;
-const uint8_t fw_sub_ver = 0x03;
+const uint8_t fw_sub_ver = 0x04;
 
 void app_main(void)
 {
@@ -26,5 +27,6 @@ void app_main(void)
     crypto_initialize();
     wifi_interface_init();
     wifi_service_init();
-    heter_uart_init();
+    dish_washer_modbus_init();
+    //heter_uart_init();
 }
