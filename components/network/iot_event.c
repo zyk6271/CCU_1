@@ -45,8 +45,8 @@ void tcp_event_process(void *parameter)
 void tcp_event_init(void)
 {
 	heater_heart_timer_init();
-	heater_poll_timer_init();
-	heater_detect_timer_init();
+	// heater_poll_timer_init();
+	// heater_detect_timer_init();
 	// wifi_rinnai_priority_timer_init();
 	tcp_event = xEventGroupCreate();
 	xTaskCreatePinnedToCore(tcp_event_process, "tcp_event", 4096, NULL, 3, NULL, tskNO_AFFINITY);
