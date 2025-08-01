@@ -11,7 +11,7 @@
 #include "heater_interface_api.h"
 #include "esp_log.h"
 
-uint8_t device_type = HEATER_TYPE_HOME;
+uint8_t device_type = HEATER_TYPE_NONE;
 
 void hearter_device_type_set(uint8_t type)
 {
@@ -71,6 +71,27 @@ void heater_interface_info_read(void)
     }
 }
 
+uint8_t heater_interface_burn_status_read(void)
+{
+    uint8_t value = 0;
+    switch(device_type)
+    {
+        case HEATER_TYPE_NORITZ_HOME:
+            value = heater_noritz_burn_status_read();
+            break;
+        case HEATER_TYPE_RINNAI_HOME:
+            value = heater_rinnai_burn_status_read();
+            break;
+        case HEATER_TYPE_RINNAL_BUSINESS:
+            value = heater_rinnai_bussiness_burn_status_read();
+            break;
+        default:
+            break;
+    }
+
+    return value;
+}
+
 void heater_interface_temperature_setting(uint8_t value)
 {
     switch(device_type)
@@ -84,6 +105,27 @@ void heater_interface_temperature_setting(uint8_t value)
         default:
             break;
     }
+}
+
+uint8_t heater_interface_temperature_value_read(void)
+{
+    uint8_t value = 0;
+    switch(device_type)
+    {
+        case HEATER_TYPE_NORITZ_HOME:
+            value = heater_noritz_temp_read();
+            break;
+        case HEATER_TYPE_RINNAI_HOME:
+            value = heater_rinnai_temp_read();
+            break;
+        case HEATER_TYPE_RINNAL_BUSINESS:
+            value = heater_rinnai_bussiness_temp_read();
+            break;
+        default:
+            break;
+    }
+
+    return value;
 }
 
 void heater_interface_eco_setting(uint8_t value)
@@ -105,15 +147,36 @@ void heater_interface_circulation_setting(uint8_t value)
 {
     switch(device_type)
     {
+        // case HEATER_TYPE_NORITZ_HOME:
+        //     heater_noritz_circulation_write(value);
+        //     break;
+        // case HEATER_TYPE_RINNAI_HOME:
+        //     heater_rinnai_circulation_write(value);
+        //     break;
+        default:
+            break;
+    }
+}
+
+uint8_t heater_interface_circulation_value_read(void)
+{
+    uint8_t value = 0;
+    switch(device_type)
+    {
         case HEATER_TYPE_NORITZ_HOME:
-            heater_noritz_circulation_write(value);
+            value = heater_noritz_circle_read();
             break;
         case HEATER_TYPE_RINNAI_HOME:
-            heater_rinnai_circulation_write(value);
+            value = heater_rinnai_circle_read();
+            break;
+        case HEATER_TYPE_RINNAL_BUSINESS:
+            value = heater_rinnai_bussiness_circle_read();
             break;
         default:
             break;
     }
+
+    return value;
 }
 
 void heater_interface_power_setting(uint8_t value)
@@ -129,6 +192,27 @@ void heater_interface_power_setting(uint8_t value)
         default:
             break;
     }
+}
+
+uint8_t heater_interface_power_value_read(void)
+{
+    uint8_t value = 0;
+    switch(device_type)
+    {
+        case HEATER_TYPE_NORITZ_HOME:
+            value = heater_noritz_onoff_read();
+            break;
+        case HEATER_TYPE_RINNAI_HOME:
+            value = heater_rinnai_onoff_read();
+            break;
+        case HEATER_TYPE_RINNAL_BUSINESS:
+            value = heater_rinnai_bussiness_onoff_read();
+            break;
+        default:
+            break;
+    }
+
+    return value;
 }
 
 void heater_interface_priority_setting(uint8_t value)

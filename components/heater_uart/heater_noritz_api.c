@@ -7,6 +7,7 @@
 #include "network_typedef.h"
 #include "wifi_api.h"
 #include "wifi_manager.h"
+#include "heater_remote.h"
 #include "heater_interface_api.h"
 
 static const char *TAG = "heater_noritz";
@@ -84,7 +85,6 @@ void heater_noritz_temperature_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void heater_noritz_eco_write(uint8_t value)
@@ -101,7 +101,6 @@ void heater_noritz_eco_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void heater_noritz_circulation_write(uint8_t value)
@@ -118,7 +117,6 @@ void heater_noritz_circulation_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void heater_noritz_power_write(uint8_t value)
@@ -135,7 +133,6 @@ void heater_noritz_power_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void heater_noritz_priority_write(uint8_t value)
@@ -152,7 +149,6 @@ void heater_noritz_priority_write(uint8_t value)
     send_len = set_heater_uart_tx_crc(send_len);
     send_len = set_heater_uart_tx_byte(send_len,0x0D);
     heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
-    //heater_uart_tx_queue_enqueue(get_heater_uart_tx_buf(), send_len);
 }
 
 void wifi_noritz_command_model_upload(void)
@@ -358,6 +354,26 @@ void wifi_noritz_command_info_upload(void)
     free(encrypt_ptr);
 }
 
+uint8_t heater_noritz_temp_read(void)
+{
+    return heater_noritz_info.current_temperature_setting;
+}
+
+uint8_t heater_noritz_onoff_read(void)
+{
+    return heater_noritz_info.on_off_setting;
+}
+
+uint8_t heater_noritz_circle_read(void)
+{
+    return heater_noritz_info.circulation_status;
+}
+
+uint8_t heater_noritz_burn_status_read(void)
+{
+    return heater_noritz_info.combustion_status;
+}
+
 void heater_noritz_data_handle(uint8_t offset)
 {
     heater_noritz_uart_frame_t info_frame;
@@ -437,14 +453,14 @@ void heater_noritz_data_handle(uint8_t offset)
             {
                 heater_noritz_info.on_off_setting = char_to_hex(info_frame.on_off_setting[0]) * 10 + char_to_hex(info_frame.on_off_setting[1]);
             }
-
             wifi_noritz_command_info_upload();
+            heater_remote_data_refresh();
             ESP_LOGI(TAG,"heater_noritz temperature %d",heater_noritz_info.current_temperature_setting);
             ESP_LOGI(TAG,"heater_noritz eco_status %d",heater_noritz_info.eco_status);
             ESP_LOGI(TAG,"heater_noritz on_off_setting %d",heater_noritz_info.on_off_setting);
+            ESP_LOGI(TAG,"heater_noritz circulation %d",heater_noritz_info.circulation_status);
             break;
         default:
             break;
     }
 }
-

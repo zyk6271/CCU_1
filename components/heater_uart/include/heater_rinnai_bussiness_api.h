@@ -43,4 +43,8 @@ void heater_rinnai_bussiness_error_record_read(void);
 void heater_rinnai_bussiness_current_temp_read(void);
 void heater_rinnai_bussiness_onoff_setting_read(void);
 void wifi_rinnai_bussiness_command_info_upload(void);
+uint8_t heater_rinnai_bussiness_temp_read(void);
+uint8_t heater_rinnai_bussiness_onoff_read(void);
+uint8_t heater_rinnai_bussiness_circle_read(void);
+uint8_t heater_rinnai_bussiness_burn_status_read(void);
 void heater_rinnai_bussiness_data_handle(uint8_t offset);

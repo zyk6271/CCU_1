@@ -8,6 +8,7 @@
 #include "wifi_api.h"
 #include "esp_timer.h"
 #include "wifi_manager.h"
+#include "heater_remote.h"
 #include "heater_interface_api.h"
 
 static const char *TAG = "heater_rinnai";
@@ -16,6 +17,7 @@ uint16_t last_combustion_status = 1;
 
 static heater_rinnai_info_t heater_rinnai_info = 
 {
+    .circulation_status = 0x01,
     .current_priority_location = 0x02,
 };
 static heater_rinnai_info_t heater_rinnai_info_last = {0};
@@ -418,6 +420,26 @@ void wifi_rinnai_command_info_upload(void)
     free(encrypt_ptr);
 }
 
+uint8_t heater_rinnai_temp_read(void)
+{
+    return heater_rinnai_info.current_temperature_setting;
+}
+
+uint8_t heater_rinnai_onoff_read(void)
+{
+    return heater_rinnai_info.on_off_setting;
+}
+
+uint8_t heater_rinnai_circle_read(void)
+{
+    return heater_rinnai_info.circulation_status;
+}
+
+uint8_t heater_rinnai_burn_status_read(void)
+{
+    return heater_rinnai_info.combustion_status;
+}
+
 void heater_rinnai_data_handle(uint8_t offset)
 {
     heater_rinnai_uart_frame_t info_frame;
@@ -484,7 +506,7 @@ void heater_rinnai_data_handle(uint8_t offset)
             heater_rinnai_info.combustion_status = char_to_hex(info_frame.combustion_status[0]) << 4 | char_to_hex(info_frame.combustion_status[1]);
             heater_rinnai_info.current_temperature_setting = char_to_hex(info_frame.current_temperature_setting[0]) << 4 | char_to_hex(info_frame.current_temperature_setting[1]);
             heater_rinnai_info.eco_status = char_to_hex(info_frame.eco_status[0]) << 4 | char_to_hex(info_frame.eco_status[1]);
-            heater_rinnai_info.circulation_status = char_to_hex(info_frame.circulation_status[0]) << 4 | char_to_hex(info_frame.circulation_status[1]);
+            //heater_rinnai_info.circulation_status = char_to_hex(info_frame.circulation_status[0]) << 4 | char_to_hex(info_frame.circulation_status[1]);
             
             if((char_to_hex(info_frame.on_off_setting[0]) << 4 | char_to_hex(info_frame.on_off_setting[1])) == 0x20)
             {
@@ -506,24 +528,28 @@ void heater_rinnai_data_handle(uint8_t offset)
             }
             ESP_LOGI(TAG,"heater_rinnai read state information success");
             wifi_rinnai_command_info_upload();
+            heater_remote_data_refresh();
             break;
         case 0x3021://temperature setting
             heater_rinnai_info.current_temperature_setting = char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START]) << 4 | char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START + 1]);
             ESP_LOGI(TAG,"heater_rinnai temperature setting to %d",heater_rinnai_info.current_temperature_setting);
             wifi_rinnai_command_info_upload();
             wifi_rinnai_temperature_setting_response();
+            heater_remote_data_refresh();
             break;
         case 0x3022://eco setting
             heater_rinnai_info.eco_status = char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START]) << 4 | char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START + 1]);
             ESP_LOGI(TAG,"heater_rinnai eco_status setting to %d",heater_rinnai_info.eco_status);
             wifi_rinnai_command_info_upload();
             wifi_rinnai_eco_setting_response();
+            heater_remote_data_refresh();
             break;
         case 0x3023://circulation setting
             heater_rinnai_info.circulation_status = char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START]) << 4 | char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START + 1]);
             ESP_LOGI(TAG,"heater_rinnai circulation_status setting to %d",heater_rinnai_info.circulation_status);
             wifi_rinnai_command_info_upload();
             wifi_rinnai_circulation_setting_response();
+            heater_remote_data_refresh();
             break;
         case 0x3024://power setting
             if((char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START]) << 4 | char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START + 1])) == 1)
@@ -537,12 +563,14 @@ void heater_rinnai_data_handle(uint8_t offset)
             ESP_LOGI(TAG,"heater_rinnai on_off_setting setting to %d",heater_rinnai_info.on_off_setting);
             wifi_rinnai_command_info_upload();
             wifi_rinnai_power_setting_response();
+            heater_remote_data_refresh();
             break;
         case 0x3025://priority setting
             heater_rinnai_info.current_priority_location = char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START]) << 4 | char_to_hex(heater_data_process_buf[offset + HEATER_UART_DATA_START + 1]);
             ESP_LOGI(TAG,"heater_rinnai current_priority_location setting to %d",heater_rinnai_info.current_priority_location);
             wifi_rinnai_command_info_upload();
             wifi_rinnai_priority_setting_response();
+            heater_remote_data_refresh();
             break;
         default:
             break;

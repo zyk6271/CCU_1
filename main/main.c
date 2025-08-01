@@ -11,11 +11,13 @@
 #include "wifi_manager.h"
 #include "key.h"
 #include "heater_uart.h"
+#include "radio.h"
+#include "heater_remote.h"
 
 static const char *TAG = "main";
 
 const uint8_t fw_main_ver = 0x01;
-const uint8_t fw_sub_ver = 0x05;
+const uint8_t fw_sub_ver = 0x06;
 
 void app_main(void)
 {
@@ -27,4 +29,6 @@ void app_main(void)
     wifi_interface_init();
     wifi_service_init();
     heter_uart_init();
+    heater_remote_init();
+    radio_init();
 }

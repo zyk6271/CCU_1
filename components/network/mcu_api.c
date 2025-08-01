@@ -230,7 +230,7 @@ void wifi_uart_service(void)
         check_sum = wifi_get_check_sum((unsigned char *)wifi_data_process_buf + offset,PROTOCOL_HEAD + rx_value_len);
         if( check_sum != wifi_data_process_buf[offset + DATA_LENGTH + rx_value_len + 1]) {
             //校验出错
-            ESP_LOGE(TAG,"crc error (crc:0x%X  but data:0x%X)",check_sum,wifi_data_process_buf[offset + DATA_LENGTH + rx_value_len + 1]);
+            ESP_LOGE(TAG,"crc error (crc:0x%d  but data:0x%d)",check_sum,wifi_data_process_buf[offset + DATA_LENGTH + rx_value_len + 1]);
             offset += 2;
             continue;
         }

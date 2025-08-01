@@ -165,6 +165,7 @@ void heater_detect_finish(uint8_t value)
         esp_timer_stop(heater_detect_timer);
         heater_poll_timer_start();
         heater_heart_timer_start();
+        heater_interface_priority_setting(10);
     }
 }
 

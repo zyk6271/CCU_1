@@ -16,7 +16,7 @@ static const char *TAG = "heater_uart";
 
 struct heater_uart_send_msg
 {
-    uint8_t *data_ptr;    /* 数据块首地址 */
+    uint8_t data_ptr[255];    /* 数据块首地址 */
     uint32_t data_size;   /* 数据块大小   */
 };
 
@@ -27,7 +27,7 @@ unsigned char heater_uart_tx_buf[HEATER_UART_FRAME_MIN_SIZE + HEATER_UART_RECV_B
 unsigned char *heater_queue_in = NULL;
 unsigned char *heater_queue_out = NULL;
 
-uint8_t heater_tx_queue_buffer[ 10 * 256 ];
+uint8_t heater_tx_queue_buffer[ 5 * 256 ];
 static QueueHandle_t heater_tx_queue;
 static StaticQueue_t heater_tx_queue_static;
 
@@ -273,7 +273,7 @@ void heater_uart_service(void)
 
         if( calc_sum != src_sum) {
             //校验出错
-            ESP_LOGI(TAG,"crc error (calc:0x%X  but data:0x%X)",calc_sum,src_sum);
+            ESP_LOGI(TAG,"crc error (calc:0x%d  but data:0x%d)",calc_sum,src_sum);
             offset ++;
             continue;
         }
@@ -282,7 +282,7 @@ void heater_uart_service(void)
             break;
         }
 
-        ESP_LOGI(TAG,"recv frame success,rx_value_len is %d,checksum %04X",rx_value_len,calc_sum);
+        //ESP_LOGI(TAG,"recv frame success,rx_value_len is %d,checksum %04X",rx_value_len,calc_sum);
         heater_rinnai_data_handle(offset);
         heater_noritz_data_handle(offset);
         heater_rinnai_bussiness_data_handle(offset);
@@ -307,9 +307,9 @@ void heater_uart_service_callback(void *parameter)
 
 void heater_uart_tx_queue_enqueue(uint8_t *data,uint32_t length)
 {
-    struct heater_uart_send_msg msg_ptr;
-
-    msg_ptr.data_ptr = data;  /* 指向相应的数据块地址 */
+    struct heater_uart_send_msg msg_ptr = {0};
+    memcpy(&msg_ptr.data_ptr,data,length);
+    // msg_ptr.data_ptr = data;  /* 指向相应的数据块地址 */
     msg_ptr.data_size = length; /* 数据块的长度 */
 
     xQueueSend(heater_tx_queue, &msg_ptr, 0);
@@ -331,7 +331,7 @@ void heater_uart_service_init(void)
 {
     heater_queue_in = (unsigned char *)heater_uart_rx_buf;
     heater_queue_out = (unsigned char *)heater_uart_rx_buf;
-    heater_tx_queue = xQueueCreateStatic(10, sizeof(struct heater_uart_send_msg), heater_tx_queue_buffer, &heater_tx_queue_static);
-    xTaskCreate(heater_uart_tx_queue_handle_callback, "heater_uart_tx_queue_handle", 4096, NULL, 5, NULL);
+    heater_tx_queue = xQueueCreateStatic(5, sizeof(struct heater_uart_send_msg), heater_tx_queue_buffer, &heater_tx_queue_static);
+    xTaskCreate(heater_uart_tx_queue_handle_callback, "heater_uart_tx_queue_handle", 8192, NULL, 5, NULL);
     xTaskCreate(heater_uart_service_callback, "heater_uart_service", 4096, NULL, 6, NULL);
 }

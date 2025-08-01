@@ -7,6 +7,7 @@
 #include "wifi_api.h"
 #include "esp_timer.h"
 #include "wifi_manager.h"
+#include "heater_remote.h"
 #include "heater_interface_api.h"
 #include "heater_rinnai_bussiness_api.h"
 
@@ -405,6 +406,26 @@ void wifi_rinnai_bussiness_command_info_upload(void)
     free(encrypt_ptr);
 }
 
+uint8_t heater_rinnai_bussiness_temp_read(void)
+{
+    return heater_rinnai_bussiness_info.current_temperature_setting;
+}
+
+uint8_t heater_rinnai_bussiness_onoff_read(void)
+{
+    return heater_rinnai_bussiness_info.on_off_setting;
+}
+
+uint8_t heater_rinnai_bussiness_circle_read(void)
+{
+    return heater_rinnai_bussiness_info.circulation_status;
+}
+
+uint8_t heater_rinnai_bussiness_burn_status_read(void)
+{
+    return heater_rinnai_bussiness_info.combustion_status;
+}
+
 void heater_rinnai_bussiness_data_handle(uint8_t offset)
 {
     unsigned char device_type = heater_data_process_buf[offset + HEATER_UART_CMD_0];
@@ -479,15 +500,18 @@ void heater_rinnai_bussiness_data_handle(uint8_t offset)
         case 0x3330453031:
             heater_rinnai_bussiness_info.combustion_status = char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 1]);
             ESP_LOGI(TAG,"heater_rinnai_bussiness_info combustion_status is [%d]",heater_rinnai_bussiness_info.combustion_status);
+            heater_remote_data_refresh();
             break;
         case 0x3330463031:
             heater_rinnai_bussiness_info.current_temperature_setting = ((char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START]) << 4) |
                                                                             char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 1])) >> 1;   
             ESP_LOGI(TAG,"heater_rinnai_bussiness_info current_temperature_setting is [%02X]",heater_rinnai_bussiness_info.current_temperature_setting);
+            heater_remote_data_refresh();
             break;
         case 0x3331313031:
             heater_rinnai_bussiness_info.on_off_setting = char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 1]);
             ESP_LOGI(TAG,"heater_rinnai_bussiness_info on_off_setting is [%d]",heater_rinnai_bussiness_info.on_off_setting);
+            heater_remote_data_refresh();
             break;
         default:
             break;
