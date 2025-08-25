@@ -368,10 +368,10 @@ void ccu_modbus_poll(void)
             {
                 memcpy(modbus_drycontact_value,modbus_read_temp,sizeof(modbus_drycontact_value));
                 ESP_LOGI(TAG, "modbus_drycontact value has change\r\n");
+                ESP_LOG_BUFFER_HEXDUMP("modbus_drycontact_buf", modbus_read_temp, 64, ESP_LOG_INFO);
                 drycontact_sensor_info_upload();
             }
         } 
-        ESP_LOG_BUFFER_HEXDUMP("modbus_drycontact_buf", modbus_read_temp, 64, ESP_LOG_INFO);
     } 
     vTaskDelay(pdMS_TO_TICKS(300));
 
