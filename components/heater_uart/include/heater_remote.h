@@ -2,14 +2,20 @@
 
 typedef struct
 {
-    uint8_t valid[2];
-    uint8_t type[2];
-    uint32_t addr[2];
     uint8_t temp;
     uint8_t onoff;
     uint8_t burn;
     uint8_t circle;
+}heater_remote_state_t;
+
+typedef struct
+{
+    uint8_t valid[2];
+    uint8_t type[2];
+    uint32_t addr[2];
     uint32_t prio_addr;
+    heater_remote_state_t remote;
+    heater_remote_state_t local;
 }heater_remote_t;
 
 uint8_t heater_remote_valid_search(uint32_t addr);

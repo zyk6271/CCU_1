@@ -309,7 +309,6 @@ void heater_uart_tx_queue_enqueue(uint8_t *data,uint32_t length)
 {
     struct heater_uart_send_msg msg_ptr = {0};
     memcpy(&msg_ptr.data_ptr,data,length);
-    // msg_ptr.data_ptr = data;  /* 指向相应的数据块地址 */
     msg_ptr.data_size = length; /* 数据块的长度 */
 
     xQueueSend(heater_tx_queue, &msg_ptr, 0);

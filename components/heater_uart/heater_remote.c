@@ -8,7 +8,9 @@
 static const char *TAG = "heater_remote";
 
 heater_remote_t heater_remote = {0};
+
 esp_timer_handle_t heater_remote_timeout_timer;
+esp_timer_handle_t heater_remote_repeat_timer;
 
 uint8_t heater_remote_valid_search(uint32_t addr)
 {
@@ -60,26 +62,53 @@ static void heater_remote_timeout_timer_cb(void* arg)
     heater_remote_prio_addr_control(heater_remote.prio_addr,0);
 }
 
+static void heater_remote_repeat_timer_cb(void* arg)
+{
+    if(heater_remote.local.temp != heater_remote.remote.temp)
+    {
+        heater_interface_temperature_setting(heater_remote.remote.temp);
+    }
+    if(heater_remote.local.onoff != heater_remote.remote.onoff)
+    {
+        heater_interface_power_setting(heater_remote.remote.onoff);
+    }
+    if(heater_remote.local.circle != heater_remote.remote.circle)
+    {
+        heater_interface_circulation_setting(heater_remote.remote.circle);
+    }
+}
+
 void heater_remote_init(void)
 {
     uint32_t length = 0;
-    int result = storage_read_key_blob("remote_info", (uint8_t *)&heater_remote, &length);
-    ESP_LOGI(TAG,"heater_remote_info_read result %d",result);
-
+    storage_read_key_blob("remote_info", (uint8_t *)&heater_remote, &length);
     const esp_timer_create_args_t heater_remote_timeout_timer_args = 
     {
         .callback = &heater_remote_timeout_timer_cb,
         .name = "heater_remote_timeout_timer"
     };
     ESP_ERROR_CHECK(esp_timer_create(&heater_remote_timeout_timer_args, &heater_remote_timeout_timer));
+
+    const esp_timer_create_args_t heater_remote_repeat_timer_args = 
+    {
+        .callback = &heater_remote_repeat_timer_cb,
+        .name = "heater_remote_repeat_timer"
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&heater_remote_repeat_timer_args, &heater_remote_repeat_timer));
 }
 
 void heater_remote_data_refresh(void)
 {
-    heater_remote.temp = heater_interface_temperature_value_read();
-    heater_remote.circle = heater_interface_circulation_value_read();
-    heater_remote.onoff = heater_interface_power_value_read();
-    heater_remote.burn = heater_interface_burn_status_read();
+    heater_remote.local.temp = heater_interface_temperature_value_read();
+    heater_remote.local.circle = heater_interface_circulation_value_read();
+    heater_remote.local.onoff = heater_interface_power_value_read();
+    heater_remote.local.burn = heater_interface_burn_status_read();
+}
+
+void heater_remote_repeat_start(void)
+{
+    esp_timer_stop(heater_remote_repeat_timer);
+    esp_timer_start_once(heater_remote_repeat_timer, 3000 * 1000);
 }
 
 void heater_remote_timeout_start(void)
@@ -99,64 +128,67 @@ void heater_remote_timeout_refresh(void)
 
 uint8_t heater_remote_burn_read(void)
 {
-    return heater_remote.burn;
+    return heater_remote.local.burn;
 }
 
 void heater_remote_temp_control(uint32_t addr, uint8_t value)
 {
     if(addr == heater_remote.prio_addr)
     {
-        if(heater_remote.temp != value)
+        if(heater_remote.remote.temp != value)
         {
-            heater_remote.temp = value;
+            heater_remote.remote.temp = value;
             heater_interface_temperature_setting(value);
         }
         heater_remote_timeout_refresh();
+        heater_remote_repeat_start();
     }
 }
 
 uint8_t heater_remote_temp_read(void)
 {
-    return heater_remote.temp;
+    return heater_remote.remote.temp;
 }
 
 void heater_remote_onoff_control(uint32_t addr, uint8_t value)
 {
     if(addr == heater_remote.prio_addr)
     {
-        if(heater_remote.onoff != value)
+        if(heater_remote.remote.onoff != value)
         {
-            heater_remote.onoff = value;
+            heater_remote.remote.onoff = value;
             heater_interface_power_setting(value);
         }
         heater_remote_timeout_refresh();
+        heater_remote_repeat_start();
     }
 }
 
 uint8_t heater_remote_onoff_read(void)
 {
-    return heater_remote.onoff;
+    return heater_remote.remote.onoff;
 }
 
 void heater_remote_circle_control(uint32_t addr, uint8_t value)
 {
     if(addr == heater_remote.prio_addr)
     {
-        if(heater_remote.circle == 0 || heater_remote.circle == 1 )
+        if(heater_remote.local.circle == 0 || heater_remote.local.circle == 1 )
         {
-            if(heater_remote.circle != value)
+            if(heater_remote.remote.circle != value)
             {
-                heater_remote.circle = value;
+                heater_remote.remote.circle = value;
                 heater_interface_circulation_setting(value);
             }   
         }
         heater_remote_timeout_refresh();
+        heater_remote_repeat_start();
     }
 }
 
 uint8_t heater_remote_circle_read(void)
 {
-    return heater_remote.circle;
+    return heater_remote.local.circle;
 }
 
 void heater_remote_prio_addr_control(uint32_t addr,uint8_t value)

@@ -147,12 +147,12 @@ void heater_interface_circulation_setting(uint8_t value)
 {
     switch(device_type)
     {
-        // case HEATER_TYPE_NORITZ_HOME:
-        //     heater_noritz_circulation_write(value);
-        //     break;
-        // case HEATER_TYPE_RINNAI_HOME:
-        //     heater_rinnai_circulation_write(value);
-        //     break;
+        case HEATER_TYPE_NORITZ_HOME:
+            heater_noritz_circulation_write(value);
+            break;
+        case HEATER_TYPE_RINNAI_HOME:
+            heater_rinnai_circulation_write(value);
+            break;
         default:
             break;
     }

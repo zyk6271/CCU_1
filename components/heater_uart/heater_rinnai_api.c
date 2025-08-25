@@ -427,7 +427,14 @@ uint8_t heater_rinnai_temp_read(void)
 
 uint8_t heater_rinnai_onoff_read(void)
 {
-    return heater_rinnai_info.on_off_setting;
+    if(heater_rinnai_info.on_off_setting >= 0x31 && heater_rinnai_info.on_off_setting <= 0x54)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 uint8_t heater_rinnai_circle_read(void)
