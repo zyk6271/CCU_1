@@ -101,27 +101,6 @@ void wifi_data_handle(unsigned short offset,uint32_t length)
         free(local_decrypt_buffer);
         ccu_poll_status_reset();
         break;
-    // case 0x30:
-    //     heater_interface_error_read();
-    //     break;
-    // case 0x20:
-    //     heater_interface_info_read();
-    //     break;
-    // case 0x21:
-    //     heater_interface_temperature_setting(remote_decrypt_buffer[1]);
-    //     break;
-    // case 0x22:
-    //     heater_interface_eco_setting(remote_decrypt_buffer[1]);
-    //     break;
-    // case 0x23:
-    //     heater_interface_circulation_setting(remote_decrypt_buffer[1]);
-    //     break;
-    // case 0x24:
-    //     heater_interface_power_setting(remote_decrypt_buffer[1]);
-    //     break;
-    // case 0x25:
-    //     heater_interface_priority_setting(remote_decrypt_buffer[1]);
-    //     break;
     default:
         break;
     }
