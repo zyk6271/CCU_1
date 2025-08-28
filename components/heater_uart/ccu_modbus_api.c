@@ -317,7 +317,7 @@ void ccu_poll_status_reset(void)
     memset(modbus_gas_concentration_sensor_value,0,sizeof(modbus_gas_concentration_sensor_value));
 }
 
-void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,void mb_callback(void))
+void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,void (*mb_callback)(void))
 {
     uint8_t type = 0;  
     esp_err_t err = ESP_OK;
