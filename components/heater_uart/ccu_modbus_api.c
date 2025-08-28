@@ -34,9 +34,9 @@ static void *ccu_modbus_handle = NULL;
 
 // Enumeration of modbus device addresses accessed by master device
 enum {
-    GAS_FLOW_SENSOR_MB_ADDR = 0x03,
+    GAS_FLOW_SENSOR_MB_ADDR = 0x01,
     FRIDGE_MB_ADDR = 0x02,
-    CURRENTWATCH_MB_ADDR = 0x01,
+    CURRENTWATCH_MB_ADDR = 0x03,
     DRYCONTACT_MB_ADDR = 0x04,
     DISHWASHER_MB_ADDR = 0x08,
     GAS_CONCENTRATION_SENSOR_MB_ADDR = 0x09,
@@ -293,7 +293,7 @@ void gas_concentration_sensor_info_upload(void)
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
     memcpy(&plain_buf[1],  modbus_gas_concentration_sensor_value + (0x0016 - 0x0016) * 2, 2);  // 0x1321（2字节）
-    memcpy(&plain_buf[3],  modbus_gas_concentration_sensor_value + (0x001F - 0x0016) * 2, 4);  // 0x1324~0x1327（4寄存器 × 2 = 8字节）
+    memcpy(&plain_buf[3],  modbus_gas_concentration_sensor_value + (0x001E - 0x0016) * 2, 4);  // 0x1324~0x1327（4寄存器 × 2 = 8字节）
 
     ESP_LOG_BUFFER_HEXDUMP("gas_concentration_sensor_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
