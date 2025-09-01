@@ -342,7 +342,8 @@ void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,void (*mb_cal
                 mb_callback();
             }
         } 
-    } 
+    }
+    vTaskDelay(pdMS_TO_TICKS(300)); 
 }
 
 void ccu_modbus_poll(void)
