@@ -163,17 +163,35 @@ uint8_t modbus_detect_result_read(void)
 void dish_washer_info_upload(void)
 {
     uint8_t plain_buf[41] = {0};
+    uint8_t temp_buf[41] = {0};
     uint8_t *encrypt_ptr;
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
     // 按寄存器地址分段拷贝（单位：字节）
-    plain_buf[0] = tcp_send_count_read();;
-    memcpy(&plain_buf[1],  modbus_dishwasher_value + (0x1321 - 0x1320) * 2, 2);  // 0x1321（2字节）
-    memcpy(&plain_buf[3],  modbus_dishwasher_value + (0x1324 - 0x1320) * 2, 8);  // 0x1324~0x1327（4寄存器 × 2 = 8字节）
-    memcpy(&plain_buf[11], modbus_dishwasher_value + (0x132C - 0x1320) * 2, 22); // 0x132C~0x1336（11寄存器 × 2 = 22字节）
-    memcpy(&plain_buf[33], modbus_dishwasher_value + (0x133B - 0x1320) * 2, 6);  // 0x133B~0x133D（3寄存器 × 2 = 6字节）
-    memcpy(&plain_buf[39], modbus_dishwasher_value + (0x1349 - 0x1320) * 2, 2);  // 0x1349（2字节）
+    memcpy(&temp_buf[0],  modbus_dishwasher_value + (0x1321 - 0x1320) * 2, 2);  // 0x1321（2字节）
+    memcpy(&temp_buf[2],  modbus_dishwasher_value + (0x1324 - 0x1320) * 2, 8);  // 0x1324~0x1327（4寄存器 × 2 = 8字节）
+    memcpy(&temp_buf[10], modbus_dishwasher_value + (0x132C - 0x1320) * 2, 22); // 0x132C~0x1336（11寄存器 × 2 = 22字节）
+    memcpy(&temp_buf[32], modbus_dishwasher_value + (0x133B - 0x1320) * 2, 6);  // 0x133B~0x133D（3寄存器 × 2 = 6字节）
+    memcpy(&temp_buf[38], modbus_dishwasher_value + (0x1349 - 0x1320) * 2, 2);  // 0x1349（2字节）
+
+    plain_buf[0] = tcp_send_count_read();
+    plain_buf[2] = temp_buf[2];
+    plain_buf[3] = temp_buf[3];
+    plain_buf[4] = temp_buf[4];
+    plain_buf[5] = temp_buf[5];
+    plain_buf[6] = temp_buf[10];
+    plain_buf[7] = temp_buf[11];
+    plain_buf[10] = temp_buf[0];
+    plain_buf[11] = temp_buf[1];
+    plain_buf[13] = temp_buf[32];
+    plain_buf[14] = temp_buf[33];
+    plain_buf[16] = temp_buf[28];
+    plain_buf[17] = temp_buf[29];
+    plain_buf[30] = temp_buf[22];
+    plain_buf[31] = temp_buf[23];
+    plain_buf[33] = temp_buf[30];
+    plain_buf[34] = temp_buf[31];
 
     ESP_LOG_BUFFER_HEXDUMP("dish_washer_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -195,7 +213,21 @@ void currentwatch_info_upload(void)
 
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_currentwatch_value, 12);  // 0x1321（2字节）
+
+    plain_buf[2] = modbus_currentwatch_value[0];
+    plain_buf[3] = modbus_currentwatch_value[1];
+    plain_buf[4] = modbus_currentwatch_value[2];
+    plain_buf[5] = modbus_currentwatch_value[3];
+
+    plain_buf[13] = modbus_currentwatch_value[4];
+    plain_buf[14] = modbus_currentwatch_value[5];
+    plain_buf[16] = modbus_currentwatch_value[6];
+    plain_buf[17] = modbus_currentwatch_value[7];
+
+    plain_buf[30] = modbus_currentwatch_value[8];
+    plain_buf[31] = modbus_currentwatch_value[9];
+    plain_buf[33] = modbus_currentwatch_value[10];
+    plain_buf[34] = modbus_currentwatch_value[11];
 
     ESP_LOG_BUFFER_HEXDUMP("currentwatch_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -215,9 +247,35 @@ void fridge_info_upload(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
+    float temp = (modbus_fridge_value[0] << 8) | modbus_fridge_value[1];
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_fridge_value, 21);  // 0x1321（2字节）
+    plain_buf[2] = modbus_fridge_value[0];
+    plain_buf[3] = modbus_fridge_value[1];
+    plain_buf[35] = modbus_fridge_value[27];
+    plain_buf[40] = modbus_fridge_value[25];
+
+    if(modbus_fridge_value[35])
+    {
+        plain_buf[1] = 0x08;
+    }
+    if(modbus_fridge_value[11])
+    {
+        plain_buf[1] = 0x07;
+    }
+    if(modbus_fridge_value[9])
+    {
+        plain_buf[1] = 0x06;
+    }
+    if(modbus_fridge_value[5])
+    {
+        plain_buf[1] = 0x05;
+    }
+
+    if(temp < 0)
+    {
+        plain_buf[36] = 1;
+    }
 
     ESP_LOG_BUFFER_HEXDUMP("fridge_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -270,7 +328,9 @@ void drycontact_sensor_info_upload(void)
 
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_drycontact_value, 1); 
+    plain_buf[35] = (modbus_drycontact_value[0] & 0x02) > 0 ? 1 : 0;
+    plain_buf[38] = (modbus_drycontact_value[0] & 0x04) > 0 ? 1 : 0;
+    plain_buf[40] = (modbus_drycontact_value[0] & 0x01) > 0 ? 1 : 0;
 
     ESP_LOG_BUFFER_HEXDUMP("drycontact_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -290,10 +350,25 @@ void gas_concentration_sensor_info_upload(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
+    float temp = (modbus_gas_concentration_sensor_value[16] << 8) | modbus_gas_concentration_sensor_value[17];
+    float humi = (modbus_gas_concentration_sensor_value[78] << 8) | modbus_gas_concentration_sensor_value[19];
+
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_gas_concentration_sensor_value + (0x0016 - 0x0016) * 2, 2);  // 0x1321（2字节）
-    memcpy(&plain_buf[3],  modbus_gas_concentration_sensor_value + (0x001E - 0x0016) * 2, 4);  // 0x1324~0x1327（4寄存器 × 2 = 8字节）
+    plain_buf[2] = modbus_gas_concentration_sensor_value[0];
+    plain_buf[3] = modbus_gas_concentration_sensor_value[1];
+    plain_buf[4] = modbus_gas_concentration_sensor_value[16];
+    plain_buf[5] = modbus_gas_concentration_sensor_value[17];
+    plain_buf[6] = modbus_gas_concentration_sensor_value[18];
+    plain_buf[7] = modbus_gas_concentration_sensor_value[19];
+    if(humi < 0)
+    {
+        plain_buf[36] = 1;
+    }
+    if(temp < 0)
+    {
+        plain_buf[40] = 1;
+    }
 
     ESP_LOG_BUFFER_HEXDUMP("gas_concentration_sensor_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -338,7 +413,7 @@ void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,void (*mb_cal
             {
                 memcpy(value_temp,modbus_read_temp,param_descriptor->param_size);
                 ESP_LOGI(TAG, "%s modbus value has change\r\n",param_descriptor->param_key);
-                //ESP_LOG_BUFFER_HEXDUMP("modbus_recv_buf", modbus_read_temp, param_descriptor->param_size, ESP_LOG_INFO);
+                ESP_LOG_BUFFER_HEXDUMP("modbus_recv_buf", modbus_read_temp, param_descriptor->param_size, ESP_LOG_INFO);
                 mb_callback();
             }
         } 
