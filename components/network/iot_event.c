@@ -31,7 +31,8 @@ void tcp_event_process(void *parameter)
 		if(event & TCP_EVENT_LINK_UP)
 		{
 			ESP_LOGI(TAG,"TCP_EVENT_LINK_UP");
-			wifi_heater_common_key_request();//heart
+			extern void wifi_ccu_modbus_poll_upload(void);
+			wifi_ccu_modbus_poll_upload();
 		}
 		else if(event & TCP_EVENT_LINK_DOWN)
 		{

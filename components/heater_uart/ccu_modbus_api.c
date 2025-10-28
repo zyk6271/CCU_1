@@ -306,7 +306,6 @@ void gas_concentration_sensor_info_upload(void)
     free(encrypt_ptr);
 }
 
-
 void ccu_poll_status_reset(void)
 {
     memset(modbus_currentwatch_value,0,sizeof(modbus_currentwatch_value));
@@ -359,6 +358,44 @@ void ccu_modbus_poll(void)
     ccu_modbus_poll_select(CID_DRYCONTACT,modbus_drycontact_value,drycontact_sensor_info_upload);
     ccu_modbus_poll_select(CID_DISHWASHER,modbus_dishwasher_value,dish_washer_info_upload);
     ccu_modbus_poll_select(CID_GAS_CONCENTRATION_SENSOR,modbus_gas_concentration_sensor_value,gas_concentration_sensor_info_upload);
+}
+
+bool isArrayEmpty(uint8_t *array, int size) {
+    for (int i = 0; i < size; i++) {
+        if (array[i] != 0) { // 检查是否有非零元素
+            return false; // 如果找到非零元素，返回false，即数组不为空
+        }
+    }
+
+    return true; // 如果所有元素都是0，返回true，即数组为空（在这个上下文中认为是空的）
+}
+
+void wifi_ccu_modbus_poll_upload(void)
+{
+    if(isArrayEmpty(modbus_gas_flow_sensor_value,sizeof(modbus_gas_flow_sensor_value)) == 0)
+    {
+        gas_flow_sensor_info_upload();
+    }
+    if(isArrayEmpty(modbus_fridge_value,sizeof(modbus_fridge_value)) == 0)
+    {
+        fridge_info_upload();
+    }
+    if(isArrayEmpty(modbus_currentwatch_value,sizeof(modbus_currentwatch_value)) == 0)
+    {
+        currentwatch_info_upload();
+    }
+    if(isArrayEmpty(modbus_drycontact_value,sizeof(modbus_drycontact_value)) == 0)
+    {
+        drycontact_sensor_info_upload();
+    }
+    if(isArrayEmpty(modbus_dishwasher_value,sizeof(modbus_dishwasher_value)) == 0)
+    {
+        dish_washer_info_upload();
+    }
+    if(isArrayEmpty(modbus_gas_concentration_sensor_value,sizeof(modbus_gas_concentration_sensor_value)) == 0)
+    {
+        gas_concentration_sensor_info_upload();
+    }
 }
 
 void hmodbus_poll_thread_callback(void *parameter)

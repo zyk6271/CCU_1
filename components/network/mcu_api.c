@@ -160,12 +160,12 @@ void wifi_uart_receive_input(unsigned char value)
 {
     if(1 == wifi_queue_out - wifi_queue_in)
     {
-        ESP_LOGE(TAG,"uart_receive queue is full now");
+        ESP_LOGE(TAG,"tcp_receive queue is full now");
         //数据队列满
     }
     else if((wifi_queue_in > wifi_queue_out) && ((wifi_queue_in - wifi_queue_out) >= sizeof(wifi_data_process_buf)))
     {
-        ESP_LOGE(TAG,"uart_receive queue is full now");
+        ESP_LOGE(TAG,"tcp_receive queue is full now");
         //数据队列满
     }
     else

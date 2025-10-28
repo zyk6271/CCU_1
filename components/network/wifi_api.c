@@ -75,14 +75,11 @@ void wifi_heater_common_heart_upload(void)
     free(encrypt_ptr);
 }
 
-// static void heater_poll_upload_timer_callback(void* arg)
-// {
-//     heater_interface_status_reset();
-// }
-
 static void heater_heart_timer_callback(void* arg)
 {
-    wifi_heater_common_heart_upload();
+    extern void wifi_ccu_modbus_poll_upload(void);
+    wifi_ccu_modbus_poll_upload();
+    //wifi_heater_common_heart_upload();
     // if(heater_detect_done == 1 && smartconfig_start_flag == 0)
     // {
     //     wifi_heater_common_heart_upload();
@@ -93,7 +90,7 @@ static void heater_heart_timer_callback(void* arg)
 void heater_heart_timer_start(void)
 {
     esp_timer_stop(heater_heart_timer);
-    esp_timer_start_periodic(heater_heart_timer, 30 * 1000 * 1000);
+    esp_timer_start_periodic(heater_heart_timer, 300 * 1000 * 1000);
 }
 
 void heater_heart_timer_stop(void)
@@ -116,7 +113,7 @@ void heater_heart_timer_init(void)
     // };
     
     ESP_ERROR_CHECK(esp_timer_create(&heart_timer_args, &heater_heart_timer));
-    esp_timer_start_periodic(heater_heart_timer, 30 * 1000 * 1000);
+    esp_timer_start_periodic(heater_heart_timer, 300 * 1000 * 1000);
     // ESP_ERROR_CHECK(esp_timer_create(&heater_poll_upload_timer_args, &heater_poll_upload_timer));
 }
 

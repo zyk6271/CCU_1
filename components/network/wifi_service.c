@@ -17,6 +17,9 @@
 #include "mcu_api.h"
 #include "system.h"
 #include "esp_wifi.h"
+#include "esp_log.h"
+
+static const char *TAG = "wifi_service";
 
 uint8_t ccu_device_id[7] = {0};
 
@@ -48,6 +51,9 @@ void ccu_device_id_convert(void)
     ccu_device_id[4] = macAddr[2];
     ccu_device_id[5] = macAddr[1];
     ccu_device_id[6] = macAddr[0];
+    ESP_LOGI(TAG,"\r\n-------------------------------------------------------------------------------------");
+    ESP_LOGI(TAG,"CCU Device Type [%02X],CCU Device ID [%02X][%02X][%02X][%02X][%02X][%02X]",ccu_device_id[0],ccu_device_id[1],ccu_device_id[2],ccu_device_id[3],ccu_device_id[4],ccu_device_id[5],ccu_device_id[6]);
+    ESP_LOGI(TAG,"\r\n--------------------------------------------------------------------------------------");
 }
 
 void wifi_service_init(void)
