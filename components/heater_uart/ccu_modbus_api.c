@@ -40,6 +40,9 @@ enum {
     DRYCONTACT_MB_ADDR = 0x04,
     DISHWASHER_MB_ADDR = 0x08,
     GAS_CONCENTRATION_SENSOR_MB_ADDR = 0x09,
+    ULTRA_SONIC_GAS_METER_MB_ADDR = 0x0A,
+    GAS_STEAMER_MB_ADDR = 0x19,
+    GAS_WOK_MB_ADDR = 0x1A,
 };
 
 // Enumeration of all supported CIDs for device (used in parameter definition table)
@@ -50,6 +53,9 @@ enum {
     CID_DRYCONTACT,
     CID_DISHWASHER,
     CID_GAS_CONCENTRATION_SENSOR,
+    CID_ULTRA_SONIC_GAS_METER,
+    CID_GAS_STEAMER,
+    CID_GAS_WOK,
     CID_COUNT
 };
 
@@ -61,6 +67,9 @@ uint8_t modbus_gas_flow_sensor_value[32] = {0};
 uint8_t modbus_dishwasher_value[128] = {0};
 uint8_t modbus_drycontact_value[16] = {0};
 uint8_t modbus_gas_concentration_sensor_value[32] = {0};
+uint8_t modbus_ultra_sonic_gas_meter_value[16] = {0};
+uint8_t modbus_gas_steamer_value[10] = {0};
+uint8_t modbus_gas_wok_value[8] = {0};
 
 uint8_t modbus_read_temp[128] = {0};   
 
@@ -151,6 +160,48 @@ const mb_parameter_descriptor_t device_parameters[] = {
         OPTS(0, 0, 0),                          // 无范围限制
         PAR_PERMS_READ                          // 只读
     },
+    {
+        CID_ULTRA_SONIC_GAS_METER,
+        "ULTRA_SONIC_GAS_METER",                // 名称
+        "--",                                   // 无单位
+        ULTRA_SONIC_GAS_METER_MB_ADDR,          // 从机地址（需与设备一致）
+        MB_PARAM_HOLDING,                       // 输入寄存器（只读）
+        0x0000,                                 // 寄存器起始地址
+        8,                                     // 占用10个寄存器（16位）
+        0,                                      // 数据偏移量（需根据实际结构体调整）
+        PARAM_TYPE_U16_BA,                      // 16位无符号整数
+        16,                                     // 14字节
+        OPTS(0, 0, 0),                          // 无范围限制
+        PAR_PERMS_READ                          // 只读
+    },
+    {
+        CID_GAS_STEAMER,
+        "GAS_STEAMER",                           // 名称
+        "--",                                   // 无单位
+        GAS_STEAMER_MB_ADDR,                    // 从机地址（需与设备一致）
+        MB_PARAM_HOLDING,                       // 输入寄存器（只读）
+        0x0000,                                 // 寄存器起始地址
+        5,                                      // 占用10个寄存器（16位）
+        0,                                      // 数据偏移量（需根据实际结构体调整）
+        PARAM_TYPE_U16_BA,                      // 16位无符号整数
+        10,                                     // 14字节
+        OPTS(0, 0, 0),                          // 无范围限制
+        PAR_PERMS_READ                          // 只读
+    },
+    {
+        CID_GAS_WOK,
+        "GAS_WOK",                              // 名称
+        "--",                                   // 无单位
+        GAS_WOK_MB_ADDR,                        // 从机地址（需与设备一致）
+        MB_PARAM_HOLDING,                       // 输入寄存器（只读）
+        0x0000,                                 // 寄存器起始地址
+        3,                                      // 占用10个寄存器（16位）
+        0,                                      // 数据偏移量（需根据实际结构体调整）
+        PARAM_TYPE_U16_BA,                      // 16位无符号整数
+        6,                                      // 14字节
+        OPTS(0, 0, 0),                          // 无范围限制
+        PAR_PERMS_READ                          // 只读
+    },
 };
 
 const uint16_t num_device_parameters = (sizeof(device_parameters)/sizeof(device_parameters[0]));
@@ -217,7 +268,7 @@ void fridge_info_upload(void)
 
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_fridge_value, 21);  // 0x1321（2字节）
+    memcpy(&plain_buf[1],  modbus_fridge_value, 40);  // 0x1321（2字节）
 
     ESP_LOG_BUFFER_HEXDUMP("fridge_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -306,6 +357,72 @@ void gas_concentration_sensor_info_upload(void)
     free(encrypt_ptr);
 }
 
+void ultra_sonic_gas_meter_info_upload(void)
+{
+    uint8_t plain_buf[41] = {0};
+    uint8_t *encrypt_ptr;
+    uint16_t send_len = 0;
+    uint32_t encrypt_size = 0;
+
+    // 按寄存器地址分段拷贝（单位：字节）
+    plain_buf[0] = tcp_send_count_read();
+    memcpy(&plain_buf[1],  modbus_ultra_sonic_gas_meter_value, 16); 
+
+    ESP_LOG_BUFFER_HEXDUMP("ultra_sonic_gas_meter_info_upload", plain_buf, 41, ESP_LOG_INFO);
+
+    crypto_aes_remote_encrypt(plain_buf, 41, &encrypt_ptr, &encrypt_size);
+
+    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+
+    wifi_uart_write_frame(0xB0, 41, send_len);
+
+    free(encrypt_ptr);
+}
+
+void gas_steamer_info_upload(void)
+{
+    uint8_t plain_buf[41] = {0};
+    uint8_t *encrypt_ptr;
+    uint16_t send_len = 0;
+    uint32_t encrypt_size = 0;
+
+    // 按寄存器地址分段拷贝（单位：字节）
+    plain_buf[0] = tcp_send_count_read();
+    memcpy(&plain_buf[1],  modbus_gas_steamer_value, 10); 
+
+    ESP_LOG_BUFFER_HEXDUMP("gas_steamer_info_upload", plain_buf, 41, ESP_LOG_INFO);
+
+    crypto_aes_remote_encrypt(plain_buf, 41, &encrypt_ptr, &encrypt_size);
+
+    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+
+    wifi_uart_write_frame(0xB0, 41, send_len);
+
+    free(encrypt_ptr);
+}
+
+void gas_wok_info_upload(void)
+{
+    uint8_t plain_buf[41] = {0};
+    uint8_t *encrypt_ptr;
+    uint16_t send_len = 0;
+    uint32_t encrypt_size = 0;
+
+    // 按寄存器地址分段拷贝（单位：字节）
+    plain_buf[0] = tcp_send_count_read();
+    memcpy(&plain_buf[1],  modbus_gas_wok_value, 8); 
+
+    ESP_LOG_BUFFER_HEXDUMP("gas_wok_info_upload", plain_buf, 41, ESP_LOG_INFO);
+
+    crypto_aes_remote_encrypt(plain_buf, 41, &encrypt_ptr, &encrypt_size);
+
+    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+
+    wifi_uart_write_frame(0xB0, 41, send_len);
+
+    free(encrypt_ptr);
+}
+
 void ccu_poll_status_reset(void)
 {
     memset(modbus_currentwatch_value,0,sizeof(modbus_currentwatch_value));
@@ -314,6 +431,9 @@ void ccu_poll_status_reset(void)
     memset(modbus_gas_flow_sensor_value,0,sizeof(modbus_gas_flow_sensor_value));
     memset(modbus_drycontact_value,0,sizeof(modbus_drycontact_value));
     memset(modbus_gas_concentration_sensor_value,0,sizeof(modbus_gas_concentration_sensor_value));
+    memset(modbus_ultra_sonic_gas_meter_value,0,sizeof(modbus_ultra_sonic_gas_meter_value));
+    memset(modbus_gas_steamer_value,0,sizeof(modbus_gas_steamer_value));
+    memset(modbus_gas_wok_value,0,sizeof(modbus_gas_wok_value));
 }
 
 void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,void (*mb_callback)(void))
@@ -358,6 +478,9 @@ void ccu_modbus_poll(void)
     ccu_modbus_poll_select(CID_DRYCONTACT,modbus_drycontact_value,drycontact_sensor_info_upload);
     ccu_modbus_poll_select(CID_DISHWASHER,modbus_dishwasher_value,dish_washer_info_upload);
     ccu_modbus_poll_select(CID_GAS_CONCENTRATION_SENSOR,modbus_gas_concentration_sensor_value,gas_concentration_sensor_info_upload);
+    ccu_modbus_poll_select(CID_ULTRA_SONIC_GAS_METER,modbus_ultra_sonic_gas_meter_value,ultra_sonic_gas_meter_info_upload);
+    ccu_modbus_poll_select(CID_GAS_STEAMER,modbus_gas_steamer_value,gas_steamer_info_upload);
+    ccu_modbus_poll_select(CID_GAS_WOK,modbus_gas_wok_value,gas_wok_info_upload);
 }
 
 bool isArrayEmpty(uint8_t *array, int size) {
@@ -395,6 +518,18 @@ void wifi_ccu_modbus_poll_upload(void)
     if(isArrayEmpty(modbus_gas_concentration_sensor_value,sizeof(modbus_gas_concentration_sensor_value)) == 0)
     {
         gas_concentration_sensor_info_upload();
+    }
+    if(isArrayEmpty(modbus_ultra_sonic_gas_meter_value,sizeof(modbus_ultra_sonic_gas_meter_value)) == 0)
+    {
+        ultra_sonic_gas_meter_info_upload();
+    }
+    if(isArrayEmpty(modbus_gas_steamer_value,sizeof(modbus_gas_steamer_value)) == 0)
+    {
+        gas_steamer_info_upload();
+    }
+    if(isArrayEmpty(modbus_gas_wok_value,sizeof(modbus_gas_wok_value)) == 0)
+    {
+        gas_wok_info_upload();
     }
 }
 

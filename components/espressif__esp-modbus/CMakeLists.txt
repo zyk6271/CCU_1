@@ -75,20 +75,27 @@ idf_component_register(SRCS "${srcs}"
                         LDFRAGMENTS linker.lf)
 
 # This is an alternative of macro `idf_component_optional_requires(PUBLIC mdns)` to support all versions of esp-idf 
-set(optional_reqs mdns espressif__mdns)
-idf_build_get_property(build_components BUILD_COMPONENTS)
-message(STATUS "build_components = ${build_components}")
-foreach(req ${optional_reqs} ${exclude_comps})
-    if(req IN_LIST build_components)
-        idf_component_get_property(req_lib ${req} COMPONENT_LIB)
-        target_link_libraries(${COMPONENT_LIB} PRIVATE ${req_lib})
-        message(STATUS "Req ${req} is found and added into ${COMPONENT_NAME} dependencies.")
-        target_compile_definitions(${COMPONENT_LIB} PUBLIC -DMB_MDNS_IS_INCLUDED)
-    endif()
-endforeach()
+if(CONFIG_FMB_MDNS_INTEGRATION_ENABLE)
+    set(optional_reqs mdns espressif__mdns)
+    idf_build_get_property(build_components BUILD_COMPONENTS)
+    message(STATUS "build_components = ${build_components}")
+    foreach(req ${optional_reqs} ${exclude_comps})
+        if(req IN_LIST build_components)
+            idf_component_get_property(req_lib ${req} COMPONENT_LIB)
+            target_link_libraries(${COMPONENT_LIB} PRIVATE ${req_lib})
+            message(STATUS "Req ${req} is found and added into ${COMPONENT_NAME} dependencies.")
+            target_compile_definitions(${COMPONENT_LIB} PUBLIC -DMB_MDNS_IS_INCLUDED)
+        endif()
+    endforeach()
+endif()
 
 # target_link_options(${COMPONENT_LIB} INTERFACE -fsanitize=undefined -fsanitize=alignment) #-fsanitize=address -fsanitize=undefined
 # target_link_options(${COMPONENT_LIB} INTERFACE -fsanitize=address)
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-strict-aliasing -Wno-write-strings -Werror)
+
+if(CONFIG_FMB_COMPILER_STATIC_ANALYZER_ENABLE AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(${COMPONENT_LIB} PRIVATE "-fanalyzer")
+    message(STATUS "Static analyzer option `-analyzer` is applied for ${COMPONENT_NAME}.")
+endif()
 
 message(STATUS "The mdns included is: ${MB_MDNS_IS_INCLUDED}")

@@ -16,7 +16,7 @@
 static const char *TAG = "main";
 
 const uint8_t fw_main_ver = 0x01;
-const uint8_t fw_sub_ver = 0x06;
+const uint8_t fw_sub_ver = 0x08;
 
 void app_main(void)
 {

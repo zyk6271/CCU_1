@@ -26,7 +26,7 @@ typedef struct
     mb_uid_info_t addr_info;
     uint8_t ptemp_buf[MB_TCP_BUFF_MAX_SIZE];
     // The driver object for the slave
-    port_driver_t *pdriver;
+    port_driver_t *drv_obj;
     transaction_handle_t transaction;
     uint16_t trans_count;
 } mbs_tcp_port_t;
@@ -38,31 +38,31 @@ static uint64_t mbs_port_tcp_sync_event(void *inst, mb_sync_event_t sync_event);
 
 static esp_err_t mbs_port_tcp_register_handlers(void *ctx)
 {
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
     esp_err_t ret = ESP_ERR_INVALID_STATE;
 
-    ret = mb_drv_register_handler(pdrv_ctx, MB_EVENT_READY_NUM, mbs_on_ready);
+    ret = mb_drv_register_handler(drv_obj, MB_EVENT_READY_NUM, mbs_on_ready);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_READY);
-    ret = mb_drv_register_handler(pdrv_ctx, MB_EVENT_OPEN_NUM, mbs_on_open);
+    ret = mb_drv_register_handler(drv_obj, MB_EVENT_OPEN_NUM, mbs_on_open);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_OPEN);
-    ret = mb_drv_register_handler(pdrv_ctx, MB_EVENT_CONNECT_NUM, mbs_on_connect);
+    ret = mb_drv_register_handler(drv_obj, MB_EVENT_CONNECT_NUM, mbs_on_connect);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_CONNECT);
-    ret = mb_drv_register_handler(pdrv_ctx, MB_EVENT_ERROR_NUM, mbs_on_error);
+    ret = mb_drv_register_handler(drv_obj, MB_EVENT_ERROR_NUM, mbs_on_error);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_ERROR);
-    ret = mb_drv_register_handler(pdrv_ctx, MB_EVENT_SEND_DATA_NUM, mbs_on_send_data);
+    ret = mb_drv_register_handler(drv_obj, MB_EVENT_SEND_DATA_NUM, mbs_on_send_data);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_SEND_DATA);
-    ret = mb_drv_register_handler(pdrv_ctx, MB_EVENT_RECV_DATA_NUM, mbs_on_recv_data);
+    ret = mb_drv_register_handler(drv_obj, MB_EVENT_RECV_DATA_NUM, mbs_on_recv_data);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_RECV_DATA);
-    ret = mb_drv_register_handler(pdrv_ctx, MB_EVENT_CLOSE_NUM, mbs_on_close);
+    ret = mb_drv_register_handler(drv_obj, MB_EVENT_CLOSE_NUM, mbs_on_close);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_CLOSE);
-    ret = mb_drv_register_handler(pdrv_ctx, MB_EVENT_TIMEOUT_NUM, mbs_on_timeout);
+    ret = mb_drv_register_handler(drv_obj, MB_EVENT_TIMEOUT_NUM, mbs_on_timeout);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_TIMEOUT);
     return ESP_OK;
@@ -70,29 +70,29 @@ static esp_err_t mbs_port_tcp_register_handlers(void *ctx)
 
 static esp_err_t mbs_port_tcp_unregister_handlers(void *ctx)
 {
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
     esp_err_t ret = ESP_ERR_INVALID_STATE;
-    ESP_LOGD(TAG, "%p, event handler %p, unregister.", pdrv_ctx, pdrv_ctx->event_handler);
+    ESP_LOGD(TAG, "%p, event handler %p, unregister.", drv_obj, drv_obj->event_handler);
 
-    ret = mb_drv_unregister_handler(pdrv_ctx, MB_EVENT_READY_NUM);
+    ret = mb_drv_unregister_handler(drv_obj, MB_EVENT_READY_NUM);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_READY);
-    ret = mb_drv_unregister_handler(pdrv_ctx, MB_EVENT_OPEN_NUM);
+    ret = mb_drv_unregister_handler(drv_obj, MB_EVENT_OPEN_NUM);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_OPEN);
-    ret = mb_drv_unregister_handler(pdrv_ctx, MB_EVENT_CONNECT_NUM);
+    ret = mb_drv_unregister_handler(drv_obj, MB_EVENT_CONNECT_NUM);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_CONNECT);
-    ret = mb_drv_unregister_handler(pdrv_ctx, MB_EVENT_SEND_DATA_NUM);
+    ret = mb_drv_unregister_handler(drv_obj, MB_EVENT_SEND_DATA_NUM);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_SEND_DATA);
-    ret = mb_drv_unregister_handler(pdrv_ctx, MB_EVENT_RECV_DATA_NUM);
+    ret = mb_drv_unregister_handler(drv_obj, MB_EVENT_RECV_DATA_NUM);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_RECV_DATA);
-    ret = mb_drv_unregister_handler(pdrv_ctx, MB_EVENT_CLOSE_NUM);
+    ret = mb_drv_unregister_handler(drv_obj, MB_EVENT_CLOSE_NUM);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_CLOSE);
-    ret = mb_drv_unregister_handler(pdrv_ctx, MB_EVENT_TIMEOUT_NUM);
+    ret = mb_drv_unregister_handler(drv_obj, MB_EVENT_TIMEOUT_NUM);
     MB_RETURN_ON_FALSE((ret == ESP_OK), MB_EINVAL, TAG,
                        "%x, mb tcp port event registration failed.", (int)MB_EVENT_TIMEOUT);
     return ESP_OK;
@@ -103,39 +103,40 @@ mb_err_enum_t mbs_port_tcp_create(mb_tcp_opts_t *tcp_opts, mb_port_base_t **port
     MB_RETURN_ON_FALSE((port_obj && tcp_opts), MB_EINVAL, TAG, "mb tcp port invalid arguments.");
     mbs_tcp_port_t *ptcp = NULL;
     esp_err_t err = ESP_ERR_INVALID_STATE;
-    ptcp = (mbs_tcp_port_t *)calloc(1, sizeof(mbs_tcp_port_t));
-    MB_RETURN_ON_FALSE((ptcp && port_obj), MB_EILLSTATE, TAG, "mb tcp port creation error.");
-    CRITICAL_SECTION_INIT(ptcp->base.lock);
     mb_err_enum_t ret = MB_EILLSTATE;
+    ptcp = (mbs_tcp_port_t *)calloc(1, sizeof(mbs_tcp_port_t));
+    MB_GOTO_ON_FALSE((ptcp && port_obj), MB_EILLSTATE, error, TAG, "mb tcp port creation error.");
+
+    CRITICAL_SECTION_INIT(ptcp->base.lock);
 
     // Copy object descriptor from parent object (is used for logging)
-    ptcp->base.descr = ((mb_port_base_t *)*port_obj)->descr;
-    ptcp->pdriver = NULL;
+    ptcp->base.descr = (*port_obj)->descr;
+    ptcp->drv_obj = NULL;
     ptcp->transaction = transaction_init();
     MB_GOTO_ON_FALSE((ptcp->transaction), MB_EILLSTATE, error,
                      TAG, "mb transaction init failed.");
 
     ESP_MEM_CHECK(TAG, ptcp->transaction, goto error);
 
-    err = mb_drv_register(&ptcp->pdriver);
-    MB_GOTO_ON_FALSE(((err == ESP_OK) && ptcp->pdriver), MB_EILLSTATE, error,
+    err = mb_drv_register(&ptcp->drv_obj);
+    MB_GOTO_ON_FALSE(((err == ESP_OK) && ptcp->drv_obj), MB_EILLSTATE, error,
                      TAG, "mb tcp port driver registration failed, err = (%x).", (int)err);
 
-    err = mbs_port_tcp_register_handlers(ptcp->pdriver);
-    MB_GOTO_ON_FALSE(((err == ESP_OK) && ptcp->pdriver), MB_EILLSTATE, error,
+    err = mbs_port_tcp_register_handlers(ptcp->drv_obj);
+    MB_GOTO_ON_FALSE(((err == ESP_OK) && ptcp->drv_obj), MB_EILLSTATE, error,
                      TAG, "mb tcp port driver registration failed, err = (%x).", (int)err);
 
-    ptcp->pdriver->parent = ptcp; // just for logging purposes
+    ptcp->drv_obj->parent = ptcp; // just for logging purposes
     ptcp->tcp_opts = *tcp_opts;
-    ptcp->pdriver->network_iface_ptr = tcp_opts->ip_netif_ptr;
-    ptcp->pdriver->mb_proto = tcp_opts->mode;
-    ptcp->pdriver->uid = tcp_opts->uid;
-    ptcp->pdriver->is_master = false;
-    ptcp->pdriver->event_cbs.mb_sync_event_cb = mbs_port_tcp_sync_event;
-    ptcp->pdriver->event_cbs.port_arg = (void *)ptcp;
+    ptcp->drv_obj->network_iface_ptr = tcp_opts->ip_netif_ptr;
+    ptcp->drv_obj->mb_proto = tcp_opts->mode;
+    ptcp->drv_obj->uid = tcp_opts->uid;
+    ptcp->drv_obj->is_master = false;
+    ptcp->drv_obj->event_cbs.mb_sync_event_cb = mbs_port_tcp_sync_event;
+    ptcp->drv_obj->event_cbs.port_arg = (void *)ptcp;
 
 #ifdef MB_MDNS_IS_INCLUDED
-err = port_start_mdns_service(&ptcp->pdriver->dns_name, false, tcp_opts->uid, ptcp->pdriver->network_iface_ptr);
+err = port_start_mdns_service(&ptcp->drv_obj->dns_name, false, tcp_opts->uid, ptcp->drv_obj->network_iface_ptr);
     MB_GOTO_ON_FALSE((err == ESP_OK), MB_EILLSTATE, error, 
                         TAG, "mb tcp port mdns service init failure.");
     ESP_LOGD(TAG, "Start mdns for @%p", ptcp);
@@ -153,15 +154,14 @@ error:
     {
         transaction_destroy(ptcp->transaction);
     }
+    if (ptcp && ptcp->drv_obj) {
 #ifdef MB_MDNS_IS_INCLUDED
-    port_stop_mdns_service(&ptcp->pdriver->dns_name);
+        port_stop_mdns_service(&ptcp->drv_obj->dns_name);
 #endif
-    if (ptcp && ptcp->pdriver)
-    {
-        if (ptcp->pdriver->event_handler[0]) {
-            mbs_port_tcp_unregister_handlers(ptcp->pdriver);
+        if (ptcp->drv_obj->event_handler[0]) {
+            mbs_port_tcp_unregister_handlers(ptcp->drv_obj);
         }
-        (void)mb_drv_unregister(ptcp->pdriver);
+        (void)mb_drv_unregister(ptcp->drv_obj);
         CRITICAL_SECTION_CLOSE(ptcp->base.lock);
     }
     free(ptcp);
@@ -171,20 +171,17 @@ error:
 void mbs_port_tcp_delete(mb_port_base_t *inst)
 {
     mbs_tcp_port_t *port_obj = __containerof(inst, mbs_tcp_port_t, base);
-    if (port_obj && port_obj->transaction)
-    {
+    if (port_obj && port_obj->transaction) {
         transaction_destroy(port_obj->transaction);
     }
+    if (port_obj && port_obj->drv_obj) {
 #ifdef MB_MDNS_IS_INCLUDED
-    port_stop_mdns_service(&port_obj->pdriver->dns_name);
+        port_stop_mdns_service(&port_obj->drv_obj->dns_name);
 #endif
-    if (port_obj && port_obj->pdriver)
-    {
-        if (port_obj->pdriver->event_handler[0])
-        {
-            mbs_port_tcp_unregister_handlers(port_obj->pdriver);
+        if (port_obj->drv_obj->event_handler[0]) {
+            mbs_port_tcp_unregister_handlers(port_obj->drv_obj);
         }
-        (void)mb_drv_unregister(port_obj->pdriver);
+        (void)mb_drv_unregister(port_obj->drv_obj);
     }
     CRITICAL_SECTION_CLOSE(inst->lock);
     free(port_obj);
@@ -193,107 +190,108 @@ void mbs_port_tcp_delete(mb_port_base_t *inst)
 void mbs_port_tcp_enable(mb_port_base_t *inst)
 {
     mbs_tcp_port_t *port_obj = __containerof(inst, mbs_tcp_port_t, base);
-    (void)mb_drv_start_task(port_obj->pdriver);
-    DRIVER_SEND_EVENT(port_obj->pdriver, MB_EVENT_READY, UNDEF_FD);
+    (void)mb_drv_start_task(port_obj->drv_obj);
+    DRIVER_SEND_EVENT(port_obj->drv_obj, MB_EVENT_READY, UNDEF_FD);
 }
 
 void mbs_port_tcp_disable(mb_port_base_t *inst)
 {
     mbs_tcp_port_t *port_obj = __containerof(inst, mbs_tcp_port_t, base);
     // Change the state of all slaves to close
-    DRIVER_SEND_EVENT(port_obj->pdriver, MB_EVENT_CLOSE, UNDEF_FD);
-    (void)mb_drv_wait_status_flag(port_obj->pdriver, MB_FLAG_DISCONNECTED, pdMS_TO_TICKS(MB_RECONNECT_TIME_MS));
+    DRIVER_SEND_EVENT(port_obj->drv_obj, MB_EVENT_CLOSE, UNDEF_FD);
+    (void)mb_drv_wait_status_flag(port_obj->drv_obj, MB_FLAG_DISCONNECTED, pdMS_TO_TICKS(MB_RECONNECT_TIME_MS));
 }
 
-bool mbs_port_tcp_recv_data(mb_port_base_t *inst, uint8_t **ppframe, uint16_t *plength)
+bool mbs_port_tcp_recv_data(mb_port_base_t *inst, uint8_t **frame, uint16_t *length)
 {
     mbs_tcp_port_t *port_obj = __containerof(inst, mbs_tcp_port_t, base);
-    port_driver_t *pdrv_ctx = port_obj->pdriver;
+    port_driver_t *drv_obj = port_obj->drv_obj;
     mb_node_info_t *pnode = NULL;
     bool status = false;
     transaction_item_handle_t item;
 
-    if (plength && ppframe && *ppframe)
-    {
-        mb_drv_lock(pdrv_ctx);
+    if (length && frame && *frame) {
+        mb_drv_lock(drv_obj);
         item = transaction_get_first(port_obj->transaction);
-        if (item && (transaction_item_get_state(item) == ACKNOWLEDGED))
-        {
+        if (item && (transaction_item_get_state(item) == ACKNOWLEDGED)) {
             uint16_t tid = 0;
             int node_id = 0;
             size_t len = 0;
-            uint8_t *pbuf = transaction_item_get_data(item, &len, &tid, &node_id);
-            pnode = mb_drv_get_node(pdrv_ctx, node_id);
-            if (pbuf && pnode && (MB_GET_NODE_STATE(pnode) >= MB_SOCK_STATE_CONNECTED))
-            {
-                memcpy(*ppframe, pbuf, len);
-                //*ppframe = pbuf;
-                *plength = (uint16_t)len;
+            uint8_t *buf = transaction_item_get_data(item, &len, &tid, &node_id);
+            pnode = mb_drv_get_node(drv_obj, node_id);
+            if (buf && pnode && (MB_GET_NODE_STATE(pnode) >= MB_SOCK_STATE_CONNECTED)) {
+                memcpy(*frame, buf, len);
+                *length = (uint16_t)len;
                 status = true;
-                ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", get packet TID: 0x%04" PRIx16 ", %p."),
+                ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", read packet, TID: 0x%04" PRIx16 ", %p."),
                          port_obj, pnode->index, pnode->sock_id,
-                         pnode->addr_info.ip_addr_str, (unsigned)pnode->tid_counter, *ppframe);
+                         pnode->addr_info.ip_addr_str, (unsigned)pnode->tid_counter, *frame);
                 if (ESP_OK != transaction_item_set_state(item, CONFIRMED)) {
                     ESP_LOGE(TAG, "transaction queue set state fail.");
                 }
             }
         } else {
             // Delete expired frames
-            int frame_cnt = transaction_delete_expired(port_obj->transaction, 
-                                        port_get_timestamp(), 
-                                        (1000 * MB_MASTER_TIMEOUT_MS_RESPOND));
+            int frame_cnt = transaction_delete_expired(port_obj->transaction, port_get_timestamp(), MB_DROP_TRANSACTION_TIME_US);
             if (frame_cnt) {
                 ESP_LOGE(TAG, "Deleted %d expired frames.", frame_cnt);
             }
         }
-        mb_drv_unlock(pdrv_ctx);
+        mb_drv_unlock(drv_obj);
     }
     return status;
 }
 
-bool mbs_port_tcp_send_data(mb_port_base_t *inst, uint8_t *pframe, uint16_t length)
+bool mbs_port_tcp_send_data(mb_port_base_t *inst, uint8_t *frame, uint16_t length)
 {
     mbs_tcp_port_t *port_obj = __containerof(inst, mbs_tcp_port_t, base);
 
-    MB_RETURN_ON_FALSE((pframe && (length > 0)), false, TAG, "incorrect arguments.");
+    MB_RETURN_ON_FALSE((frame && (length > 0)), false, TAG, "incorrect arguments.");
     bool frame_sent = false;
 
-    uint16_t tid = MB_TCP_MBAP_GET_FIELD(pframe, MB_TCP_TID);
-    port_driver_t *pdrv_ctx = port_obj->pdriver;
+    uint16_t tid = MB_TCP_MBAP_GET_FIELD(frame, MB_TCP_TID);
+    port_driver_t *drv_obj = port_obj->drv_obj;
     transaction_item_handle_t item;
 
-    mb_drv_lock(pdrv_ctx);
-    item = transaction_dequeue(port_obj->transaction, CONFIRMED, NULL);
-    if (item) {
+    mb_drv_lock(drv_obj);
+    item = transaction_get_first(port_obj->transaction);
+    if (item && transaction_item_get_state(item) == CONFIRMED) {
         uint16_t msg_id = 0;
         int node_id = 0;
-        uint8_t *pbuf = transaction_item_get_data(item, NULL, &msg_id, &node_id);
-        if (pbuf && (tid == msg_id)) {
-            mb_node_info_t *pnode = mb_drv_get_node(pdrv_ctx, node_id);
-            int write_length = mb_drv_write(pdrv_ctx, node_id, pframe, length);
+        mb_node_info_t *pnode = NULL;
+        uint8_t *buf = transaction_item_get_data(item, NULL, &msg_id, &node_id);
+        pnode = mb_drv_get_node(drv_obj, node_id);
+        if (pnode && buf && (tid == msg_id)) {
+            int write_length = mb_drv_write(drv_obj, node_id, frame, length);
             if (pnode && write_length) {
                 frame_sent = true;
                 ESP_LOGD(TAG, "%p, node: #%d, socket(#%d)[%s], send packet TID: 0x%04" PRIx16 ":0x%04" PRIx16 ", %p, len: %d, ",
-                            pdrv_ctx, pnode->index, pnode->sock_id,
-                            pnode->addr_info.node_name_str, (unsigned)tid, (unsigned)msg_id, pframe, length);
+                            drv_obj, pnode->index, pnode->sock_id,
+                            pnode->addr_info.node_name_str, (unsigned)tid, (unsigned)msg_id, frame, length);
             } else {
-                ESP_LOGE(TAG, "%p, node: #%d, socket(#%d)[%s], mbs_write fail, TID: 0x%04" PRIx16 ":0x%04" PRIx16 ", %p, len: %d, ",
-                            pdrv_ctx, pnode->index, pnode->sock_id,
-                            pnode->addr_info.node_name_str, (unsigned)tid, (unsigned)msg_id, pframe, length);
+                ESP_LOGE(TAG, "%p, node: #%d, socket(#%d)[%s], modbus write fail, TID: 0x%04" PRIx16 ":0x%04" PRIx16 ", %p, len: %d, ",
+                            drv_obj, pnode->index, pnode->sock_id,
+                            pnode->addr_info.node_name_str, (unsigned)tid, (unsigned)msg_id, frame, length);
             }
             if (ESP_OK != transaction_item_set_state(item, REPLIED)) {
-                ESP_LOGE(TAG, "transaction queue set state fail.");
+                ESP_LOGE(TAG, "transaction queue set reply state fail.");
             }
+        } else {
+            ESP_LOGE(TAG, "%p, node: #%d, socket(#%d)[%s], could not write transaction, TID: 0x%04" PRIx16 ":0x%04" PRIx16 ", %p, len: %d, ",
+                            drv_obj, pnode->index, pnode->sock_id, pnode->addr_info.node_name_str,
+                            (unsigned)tid, (unsigned)msg_id, frame, length);
+            if (item && transaction_delete_item(port_obj->transaction, item) != ESP_OK) {
+                ESP_LOGE(TAG, "Failed to remove queued TID:0x%04" PRIx16, tid);
+            } else {
+                ESP_LOGD(TAG, "Remove the message TID:0x%04" PRIx16, tid);
+            }
+            (void)mb_drv_set_status_flag(drv_obj, MB_FLAG_TRANSACTION_READY);
         }
     } else {
-        ESP_LOGE(TAG, "queue can not find the item to send.");
+        ESP_LOGE(TAG, "can not find the confirmed transaction TID: 0x%04" PRIx16 ", drop the frame", tid);
     }
-    mb_drv_unlock(pdrv_ctx);
+    mb_drv_unlock(drv_obj);
 
-    if (!frame_sent)
-    {
-        ESP_LOGE(TAG, "incorrect frame to send.");
-    }
     return frame_sent;
 }
 
@@ -307,6 +305,10 @@ static uint64_t mbs_port_tcp_sync_event(void *inst, mb_sync_event_t sync_event)
             mb_port_event_post(inst, EVENT(EV_FRAME_RECEIVED));
             break;
 
+        case MB_SYNC_EVENT_READY:
+            mb_port_event_post(inst, EVENT(EV_READY));
+            break;
+
         case MB_SYNC_EVENT_RECV_FAIL:
             mb_port_timer_disable(inst);
             mb_port_event_set_err_type(inst, EV_ERROR_RECEIVE_DATA);
@@ -316,6 +318,13 @@ static uint64_t mbs_port_tcp_sync_event(void *inst, mb_sync_event_t sync_event)
         case MB_SYNC_EVENT_SEND_OK:
             mb_port_event_post(inst, EVENT(EV_FRAME_SENT));
             break;
+
+        case MB_SYNC_EVENT_SEND_ERR:
+            mb_port_timer_disable(inst);
+            mb_port_event_set_err_type(inst, EV_ERROR_RESPOND_TIMEOUT);
+            mb_port_event_post(inst, EVENT(EV_ERROR_PROCESS));
+            break;
+
         default:
             break;
     }
@@ -325,10 +334,10 @@ static uint64_t mbs_port_tcp_sync_event(void *inst, mb_sync_event_t sync_event)
 MB_EVENT_HANDLER(mbs_on_ready)
 {
     // The driver is registered
-    mb_event_info_t *pevent_info = (mb_event_info_t *)data;
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
-    mbs_tcp_port_t *port_obj = __containerof(pdrv_ctx->parent, mbs_tcp_port_t, base);
-    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)pevent_info->opt_fd);
+    mb_event_info_t *event_info = (mb_event_info_t *)data;
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
+    mbs_tcp_port_t *port_obj = __containerof(drv_obj->parent, mbs_tcp_port_t, base);
+    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)event_info->opt_fd);
     ESP_LOGD(TAG, "addr_table:%p, addr_type:%d, mode:%d, port:%d", port_obj->tcp_opts.ip_addr_table,
              (int)port_obj->tcp_opts.addr_type,
              (int)port_obj->tcp_opts.mode,
@@ -338,14 +347,13 @@ MB_EVENT_HANDLER(mbs_on_ready)
                                      port_obj->tcp_opts.addr_type,
                                      port_obj->tcp_opts.mode,
                                      port_obj->tcp_opts.port);
-    if (listen_sock < 0)
-    {
+    if (listen_sock < 0) {
         mb_drv_check_suspend_shutdown(ctx);
         ESP_LOGE(TAG, "%s, sock: %d, bind error", (char *)base, listen_sock);
-        mb_drv_lock(pdrv_ctx);
-        if (pdrv_ctx->retry_cnt) pdrv_ctx->retry_cnt--;
-        mb_drv_unlock(pdrv_ctx);
-        if (pdrv_ctx->retry_cnt) {
+        mb_drv_lock(drv_obj);
+        if (drv_obj->retry_cnt) drv_obj->retry_cnt--;
+        mb_drv_unlock(drv_obj);
+        if (drv_obj->retry_cnt) {
             vTaskDelay(TRANSACTION_TICKS);
             DRIVER_SEND_EVENT(ctx, MB_EVENT_READY, UNDEF_FD);
         } else {
@@ -353,224 +361,279 @@ MB_EVENT_HANDLER(mbs_on_ready)
             ESP_LOGE(TAG, "%s, stop binding.", (char *)base);
             // mbs_port_tcp_disable(&port_obj->base);
         }
-    }
-    else
-    {
+    } else {
         mb_drv_lock(ctx);
-        pdrv_ctx->listen_sock_fd = listen_sock;
+        drv_obj->listen_sock_fd = listen_sock;
         // so, all accepted sockets will inherit the keep-alive feature
-        (void)port_keep_alive(pdrv_ctx->listen_sock_fd);
+        (void)port_keep_alive_enable(drv_obj->listen_sock_fd, CONFIG_FMB_TCP_KEEP_ALIVE_TOUT_SEC);
+        (void)mb_drv_set_status_flag(drv_obj, MB_FLAG_TRANSACTION_READY);
         mb_drv_unlock(ctx);
-        ESP_LOGI(TAG, "%s  %s: fd: %d, bind is done", (char *)base, __func__, (int)pevent_info->opt_fd);
+        drv_obj->event_cbs.mb_sync_event_cb(drv_obj->event_cbs.port_arg, MB_SYNC_EVENT_READY);
+        ESP_LOGI(TAG, "%s  %s: fd: %d, bind is done", (char *)base, __func__, (int)event_info->opt_fd);
     }
 }
 
 MB_EVENT_HANDLER(mbs_on_open)
 {
-    mb_event_info_t *pevent_info = (mb_event_info_t *)data;
-    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)pevent_info->opt_fd);
+    mb_event_info_t *event_info = (mb_event_info_t *)data;
+    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)event_info->opt_fd);
 }
 
 MB_EVENT_HANDLER(mbs_on_connect)
 {
-    mb_event_info_t *pevent_info = (mb_event_info_t *)data;
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
-    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)pevent_info->opt_fd);
-    mb_node_info_t *pnode = mb_drv_get_node(pdrv_ctx, pevent_info->opt_fd);
+    mb_event_info_t *event_info = (mb_event_info_t *)data;
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
+    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)event_info->opt_fd);
+    mb_node_info_t *pnode = mb_drv_get_node(drv_obj, event_info->opt_fd);
     if (!pnode) {
-        ESP_LOGD(TAG, "%s %s: fd: %d, is closed.", (char *)base, __func__, (int)pevent_info->opt_fd);
+        ESP_LOGD(TAG, "%s %s: fd: %d, is closed.", (char *)base, __func__, (int)event_info->opt_fd);
         return;
     }
-    (void)port_keep_alive(pnode->sock_id);
+    (void)port_keep_alive_enable(pnode->sock_id, CONFIG_FMB_TCP_KEEP_ALIVE_TOUT_SEC);
     mb_drv_lock(ctx);
     MB_SET_NODE_STATE(pnode, MB_SOCK_STATE_CONNECTED);
-    FD_SET(pnode->sock_id, &pdrv_ctx->conn_set);
-    if (pdrv_ctx->node_conn_count < MB_MAX_FDS) {
-        pdrv_ctx->node_conn_count++;
+    FD_SET(pnode->sock_id, &drv_obj->conn_set);
+    if (drv_obj->node_conn_count < MB_MAX_FDS) {
+        drv_obj->node_conn_count++;
     }
     mb_drv_unlock(ctx);
 }
 
 MB_EVENT_HANDLER(mbs_on_recv_data)
 {
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
-    mb_event_info_t *pevent_info = (mb_event_info_t *)data;
-    mbs_tcp_port_t *port_obj = (mbs_tcp_port_t *)pdrv_ctx->parent;
-    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)pevent_info->opt_fd);
-    mb_node_info_t *pnode = mb_drv_get_node(pdrv_ctx, pevent_info->opt_fd);
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
+    mb_event_info_t *event_info = (mb_event_info_t *)data;
+    mbs_tcp_port_t *port_obj = (mbs_tcp_port_t *)drv_obj->parent;
+    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)event_info->opt_fd);
+    mb_node_info_t *pnode = mb_drv_get_node(drv_obj, event_info->opt_fd);
     transaction_item_handle_t item = NULL;
-    if (pnode)
-    {
-        if (!queue_is_empty(pnode->rx_queue))
-        {
-            ESP_LOGD(TAG, "%p, node #%d(%d) [%s], receive data ready.", ctx, (int)pevent_info->opt_fd,
+    if (pnode) {
+        if (!queue_is_empty(pnode->rx_queue)) {
+            ESP_LOGD(TAG, "%p, node #%d, socket(#%d) [%s], receive data ready.", ctx, (int)event_info->opt_fd,
                      (int)pnode->sock_id, pnode->addr_info.ip_addr_str);
             frame_entry_t frame_entry;
             size_t sz = queue_pop(pnode->rx_queue, NULL, MB_BUFFER_SIZE, &frame_entry);
-            if (sz > MB_TCP_FUNC)
-            {
-                uint16_t tid_counter = MB_TCP_MBAP_GET_FIELD(frame_entry.pbuf, MB_TCP_TID);
-                ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", received packet TID: 0x%04" PRIx16 ", %p."),
-                         pdrv_ctx, pnode->index, pnode->sock_id,
-                         pnode->addr_info.ip_addr_str, (unsigned)tid_counter, frame_entry.pbuf);
-                mb_drv_lock(pdrv_ctx);
+            if (sz > MB_TCP_FUNC) {
+                uint16_t tid_counter = MB_TCP_MBAP_GET_FIELD(frame_entry.buf, MB_TCP_TID);
+                ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", received packet TID: 0x%04" PRIx16 ", frame: %p, %u"),
+                         drv_obj, pnode->index, pnode->sock_id,
+                         pnode->addr_info.ip_addr_str, (unsigned)tid_counter, frame_entry.buf, frame_entry.len);
+                mb_drv_lock(drv_obj);
                 transaction_message_t msg;
-                msg.buffer = frame_entry.pbuf;
+                msg.buffer = frame_entry.buf;
                 msg.len = frame_entry.len;
                 msg.msg_id = frame_entry.tid;
                 msg.node_id = pnode->index;
                 msg.pnode = pnode;
+                // Enqueue the transaction, keep time of receiving.
                 item = transaction_enqueue(port_obj->transaction, &msg, port_get_timestamp());
                 pnode->tid_counter = tid_counter; // assign the TID from frame to use it on send
-                mb_drv_unlock(pdrv_ctx);
+                mb_drv_unlock(drv_obj);
             }
         }
-        mb_drv_lock(pdrv_ctx);
         item = transaction_get_first(port_obj->transaction);
-        if (item)
-        {
-            if (transaction_item_get_state(item) == QUEUED)
-            {
+        if (item) {
+            if (transaction_item_get_state(item) == QUEUED) {
+                // Check if the main FSM is not busy
+                if (mb_port_event_res_take(&port_obj->base, TRANSACTION_TICKS)) {
+                    (void)mb_drv_clear_status_flag(drv_obj, MB_FLAG_TRANSACTION_READY);
+                } else {
+                    if (port_get_timestamp() - transaction_item_get_tick(item) > MB_DROP_TRANSACTION_TIME_US) {
+                        ESP_LOGD(TAG, "Transaction TID:0x%04" PRIx16 " is expired.", transaction_item_get_id(item));
+                    } else {
+                        // postpone the packet processing to next cycle
+                        DRIVER_SEND_EVENT(ctx, MB_EVENT_RECV_DATA, pnode->index);
+                    }
+                    mb_drv_lock(drv_obj);
+                    transaction_delete_expired(port_obj->transaction, port_get_timestamp(), MB_DROP_TRANSACTION_TIME_US);
+                    mb_drv_unlock(drv_obj);
+                    mb_drv_check_suspend_shutdown(ctx);
+                    return;
+                }
                 // send receive event to modbus object to get the new data
+                drv_obj->event_cbs.mb_sync_event_cb(drv_obj->event_cbs.port_arg, MB_SYNC_EVENT_RECV_OK);
+                mb_drv_lock(drv_obj);
                 uint16_t msg_id = 0;
-                uint64_t tick = 0;
-                (void)transaction_item_get_data(item, NULL, &msg_id, NULL);
-                tick = port_get_timestamp();
-                pdrv_ctx->event_cbs.mb_sync_event_cb(pdrv_ctx->event_cbs.port_arg, MB_SYNC_EVENT_RECV_OK);
-                transaction_set_tick(port_obj->transaction, msg_id, (transaction_tick_t)tick);
+                int node_id = 0;
+                (void)transaction_item_get_data(item, NULL, &msg_id, &node_id);
+                pnode = mb_drv_get_node(drv_obj, node_id);
+                ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", acknoledged packet TID: 0x%04" PRIx16 ", start transaction."),
+                             drv_obj, pnode->index, pnode->sock_id,
+                             pnode->addr_info.ip_addr_str, (unsigned)msg_id);
                 if (ESP_OK == transaction_item_set_state(item, ACKNOWLEDGED)) {
                     ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", acknoledged packet TID: 0x%04" PRIx16 "."),
-                             pdrv_ctx, pnode->index, pnode->sock_id,
+                             drv_obj, pnode->index, pnode->sock_id,
                              pnode->addr_info.ip_addr_str, (unsigned)msg_id);
                 }
-            }
-            else
-            {
+                mb_drv_unlock(drv_obj);
+            } else {
                 if (transaction_item_get_state(item) != TRANSMITTED) {
-                    // Todo: for test removing expired item
-                    transaction_delete_expired(port_obj->transaction, port_get_timestamp(), 1000 * 1000);
+                    // Transaction procesing is ongoing, just delete expired transactions
+                    mb_drv_lock(drv_obj);
+                    transaction_delete_expired(port_obj->transaction, port_get_timestamp(), MB_DROP_TRANSACTION_TIME_US);
+                    mb_drv_unlock(drv_obj);
                 }
-                if (MB_FLAG_TRANSACTION_DONE == mb_drv_wait_status_flag(port_obj->pdriver,
-                                                                        MB_FLAG_TRANSACTION_DONE, 
-                                                                        TRANSACTION_TICKS)) {
-                    (void)mb_drv_clear_status_flag(pdrv_ctx, MB_FLAG_TRANSACTION_DONE);
-                }
-                // postpone the packet processing
-                DRIVER_SEND_EVENT(ctx, MB_EVENT_RECV_DATA, pnode->index);
             }
         } else {
-            ESP_LOGE(TAG, "%p, no queued items found", ctx);
+            ESP_LOGD(TAG, "%p, no queued items found", ctx);
         }
-        mb_drv_unlock(pdrv_ctx);
     }
     mb_drv_check_suspend_shutdown(ctx);
 }
 
 MB_EVENT_HANDLER(mbs_on_send_data)
 {
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
-    mb_event_info_t *pevent_info = (mb_event_info_t *)data;
-    mbs_tcp_port_t *port_obj = (mbs_tcp_port_t *)pdrv_ctx->parent;
-    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)pevent_info->opt_fd);
-    mb_node_info_t *pnode = mb_drv_get_node(pdrv_ctx, pevent_info->opt_fd);
-    if (pnode && !queue_is_empty(pnode->tx_queue))
-    {
-        frame_entry_t frame_entry;
-        // pop the frame entry, keep the buffer
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
+    mb_event_info_t *event_info = (mb_event_info_t *)data;
+    mbs_tcp_port_t *port_obj = (mbs_tcp_port_t *)drv_obj->parent;
+    transaction_item_handle_t item = NULL;
+    esp_err_t err = ESP_ERR_INVALID_STATE;
+    frame_entry_t frame_entry = {0};
+    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)event_info->opt_fd);
+    mb_node_info_t *pnode = mb_drv_get_node(drv_obj, event_info->opt_fd);
+    if (pnode && !queue_is_empty(pnode->tx_queue)) {
+        // Pop the frame entry, keep the buffer
         size_t sz = queue_pop(pnode->tx_queue, NULL, MB_BUFFER_SIZE, &frame_entry);
-        if (!sz || (MB_GET_NODE_STATE(pnode) < MB_SOCK_STATE_CONNECTED)) {
-            ESP_LOGE(TAG, "%p, "MB_NODE_FMT(", is invalid, drop data."),
-                            ctx, (int)pnode->index, (int)pnode->sock_id, pnode->addr_info.ip_addr_str);
-            return;
-        }
-        uint16_t tid = MB_TCP_MBAP_GET_FIELD(frame_entry.pbuf, MB_TCP_TID);
-        pnode->error = 0;
-        int ret = port_write_poll(pnode, frame_entry.pbuf, sz, MB_TCP_SEND_TIMEOUT_MS);
-        if (ret < 0)
-        {
-            ESP_LOGE(TAG, "%p, " MB_NODE_FMT(", send data failure, err(errno) = %d(%u)."),
-                     ctx, (int)pnode->index, (int)pnode->sock_id,
-                     pnode->addr_info.ip_addr_str, (int)ret, (unsigned)errno);
-            DRIVER_SEND_EVENT(ctx, MB_EVENT_ERROR, pnode->index);
-            pnode->error = ret;
-        }
-        else
-        {
-            pnode->error = 0;
-            if (tid != pnode->tid_counter)
-            {
-                ESP_LOGE(TAG, "%p, " MB_NODE_FMT(", send incorrect frame  TID:0x%04" PRIx16 "!= 0x%04" PRIx16 ", %d (bytes), errno %d"),
-                         ctx, (int)pnode->index, (int)pnode->sock_id,
-                         pnode->addr_info.ip_addr_str, pnode->tid_counter, tid, (int)ret, (unsigned)errno);
+        if (sz) {
+            uint16_t tid = MB_TCP_MBAP_GET_FIELD(frame_entry.buf, MB_TCP_TID);
+            // Try to find actual transaction for current TID,
+            // if not found just ignore the frame as expired
+            item = transaction_get_first(port_obj->transaction);
+            if (item && pnode) {
+                uint16_t msg_id = 0;
+                int node_id = 0;
+                (void)transaction_item_get_data(item, NULL, &msg_id, &node_id);
+                // Check if the TID is equal to the current received TID for this node.
+                // If not, means the slave was not able to process the previous transaction on time.
+                // The reason is too much active connections or incorrect response time or request rate in the master.
+                if ((node_id != pnode->index) || (tid != msg_id) || (tid != pnode->tid_counter) || (MB_GET_NODE_STATE(pnode) < MB_SOCK_STATE_CONNECTED)) {
+                    mb_drv_lock(drv_obj);
+                    err = transaction_delete(port_obj->transaction, tid);
+                    mb_drv_unlock(drv_obj);
+                    if (err != ESP_OK) {
+                        ESP_LOGE(TAG, "Failed to remove queued TID:0x%04" PRIx16, (int)tid);
+                    } else {
+                        ESP_LOGD(TAG, "Remove the message TID:0x%04" PRIx16, (int)tid);
+                    }
+                    (void)mb_drv_set_status_flag(drv_obj, MB_FLAG_TRANSACTION_READY);
+                    uint64_t tick = (transaction_tick_t)transaction_item_get_tick(item);
+                    uint64_t time_div_us = (esp_timer_get_time() - tick);
+                    ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", frame TID:0x%04" PRIx16 "!=0x%04" PRIx16 ", slave is busy."),
+                                ctx, (int)pnode->index, (int)pnode->sock_id,
+                                pnode->addr_info.ip_addr_str, pnode->tid_counter, tid);
+                    ESP_LOGW(TAG, "%p, " MB_NODE_FMT(", handling time [ms]: %" PRIu64 ", exceeds slave response time in master."),
+                                ctx, (int)pnode->index, (int)pnode->sock_id,
+                                pnode->addr_info.ip_addr_str, (time_div_us / 1000));
+                    // Hard hack to fix the expired frames (unsafe in some cases, do not implement)
+                    // MB_TCP_MBAP_SET_FIELD(frame_entry.buf, MB_TCP_TID, pnode->tid_counter);
+                } else {
+                    mb_drv_lock(drv_obj);
+                    int ret = port_write_poll(pnode, frame_entry.buf, sz, MB_TCP_SEND_TIMEOUT_MS);
+                    if (ret < 0) {
+                        ESP_LOGE(TAG, "%p, " MB_NODE_FMT(", send data failure, err(errno) = %d(%u)."),
+                                ctx, (int)pnode->index, (int)pnode->sock_id,
+                                pnode->addr_info.ip_addr_str, (int)ret, (unsigned)errno);
+                        DRIVER_SEND_EVENT(ctx, MB_EVENT_ERROR, pnode->index);
+                        pnode->error = ret;
+                    } else {
+                        pnode->error = 0;
+                        ESP_LOG_BUFFER_HEX_LEVEL("SENT", frame_entry.buf, ret, ESP_LOG_DEBUG);
+                    }
+                    (void)mb_drv_set_status_flag(drv_obj, MB_FLAG_TRANSACTION_READY);
+                    err = transaction_set_state(port_obj->transaction, tid, TRANSMITTED);
+                    if (err == ESP_OK) {
+                        ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", sent packet TID: 0x%04" PRIx16 ", %p."),
+                                    drv_obj, pnode->index, pnode->sock_id,
+                                    pnode->addr_info.ip_addr_str, tid, frame_entry.buf);
+                    } else {
+                        ESP_LOGE(TAG, "%p, " MB_NODE_FMT(", transaction set state fail for TID: 0x%04" PRIx16 ", %p."),
+                                    drv_obj, pnode->index, pnode->sock_id,
+                                    pnode->addr_info.ip_addr_str, tid, frame_entry.buf);
+                    }
+                    if (transaction_delete_item(port_obj->transaction, item) != ESP_OK) {
+                        ESP_LOGE(TAG, "Failed to remove queued TID:0x%04" PRIx16, tid);
+                    } else {
+                        ESP_LOGD(TAG, "Remove the message TID:0x%04" PRIx16, tid);
+                    }
+                    pnode->send_time = port_get_timestamp();
+                    pnode->send_counter = (pnode->send_counter < (USHRT_MAX - 1)) ? (pnode->send_counter + 1) : 0;
+                    mb_drv_unlock(drv_obj);
+                }
+            } else {
+                // It looks like no current registered transaction. It might be happen if the transaction has deleted as expired.
+                // Note: the transaction processing time is increased proportional to a number of connected Masters.
+                // If it is still needed to connect several number of Masters simultaneously,
+                // then the slave response time option needs to be increased in all Masters.
+                ESP_LOGE(TAG, "%p, " MB_NODE_FMT(", transaction not found for TID: 0x%04" PRIx16 ", drop data %p."),
+                            ctx, (int)pnode->index, (int)pnode->sock_id,
+                            pnode->addr_info.ip_addr_str, tid, pnode);
+                (void)mb_drv_set_status_flag(drv_obj, MB_FLAG_TRANSACTION_READY);
             }
-            else
-            {
-                ESP_LOGD(TAG, "%p, " MB_NODE_FMT(", send data successful: TID:0x%04" PRIx16 ":0x%04" PRIx16 ", %d (bytes), errno %d"),
-                         ctx, (int)pnode->index, (int)pnode->sock_id,
-                         pnode->addr_info.ip_addr_str, pnode->tid_counter, tid, (int)ret, (unsigned)errno);
-            }
-            ESP_LOG_BUFFER_HEX_LEVEL("SENT", frame_entry.pbuf, ret, ESP_LOG_DEBUG);
-        }
-        (void)mb_drv_set_status_flag(pdrv_ctx, MB_FLAG_TRANSACTION_DONE);
-        pdrv_ctx->event_cbs.mb_sync_event_cb(pdrv_ctx->event_cbs.port_arg, MB_SYNC_EVENT_SEND_OK);
-        mb_drv_lock(pdrv_ctx);
-        transaction_set_state(port_obj->transaction, tid, TRANSMITTED);
-        if (transaction_delete(port_obj->transaction, tid) != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to remove queued TID:0x%04" PRIx16, tid);
         } else {
-            ESP_LOGD(TAG, "Remove the message TID:0x%04" PRIx16, tid);
+            ESP_LOGE(TAG, "%p, "MB_NODE_FMT(", frame is invalid, drop data."),
+                        ctx, (int)pnode->index, (int)pnode->sock_id, pnode->addr_info.ip_addr_str);
         }
-        free(frame_entry.pbuf);
-        pnode->send_time = esp_timer_get_time();
-        pnode->send_counter = (pnode->send_counter < (USHRT_MAX - 1)) ? (pnode->send_counter + 1) : 0;
-        mb_drv_unlock(pdrv_ctx);
+        free(frame_entry.buf);
     }
+    mb_drv_check_suspend_shutdown(ctx);
 }
 
 MB_EVENT_HANDLER(mbs_on_error)
 {
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
-    mb_event_info_t *pevent_info = (mb_event_info_t *)data;
-    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)pevent_info->opt_fd);
-    mb_node_info_t *pnode = mb_drv_get_node(pdrv_ctx, pevent_info->opt_fd);
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
+    mb_event_info_t *event_info = (mb_event_info_t *)data;
+    mbs_tcp_port_t *port_obj = __containerof(drv_obj->parent, mbs_tcp_port_t, base);
+    ESP_LOGD(TAG, "%s  %s: fd: %d", (char *)base, __func__, (int)event_info->opt_fd);
+    mb_node_info_t *pnode = mb_drv_get_node(drv_obj, event_info->opt_fd);
     if (!pnode) {
-        ESP_LOGD(TAG, "%s %s: fd: %d, is closed.", (char *)base, __func__, (int)pevent_info->opt_fd);
+        ESP_LOGD(TAG, "%s %s: fd: %d, is closed.", (char *)base, __func__, (int)event_info->opt_fd);
         return;
     }
     // Check if the node is not alive for timeout
-    int ret = mb_drv_check_node_state(pdrv_ctx, (int *)&pevent_info->opt_fd, MB_TCP_EVENT_LOOP_TICK_MS);
+    int ret = mb_drv_check_node_state(drv_obj, (int *)&event_info->opt_fd, MB_EVENT_SEND_RCV_TOUT_MS);
     if ((ret != ERR_OK) && (ret != ERR_TIMEOUT)) {
-        ESP_LOGE(TAG, "Node: #%d is not alive, err= %d", (int)pevent_info->opt_fd, ret);
-        mb_drv_close(pdrv_ctx, pevent_info->opt_fd);
+        ESP_LOGE(TAG, "%p, " MB_NODE_FMT(", communication fail, err= %d"),
+                        port_obj, pnode->index, pnode->sock_id,
+                        pnode->addr_info.ip_addr_str, (int)ret);
+        mb_drv_lock(drv_obj);
+        // delete all queued transactions for the node to be closed.
+        (void)transaction_delete_by_node_id(port_obj->transaction, event_info->opt_fd);
+        mb_drv_unlock(drv_obj);
+        mb_drv_close(drv_obj, event_info->opt_fd);
     }
+    mb_drv_check_suspend_shutdown(ctx);
 }
 
 MB_EVENT_HANDLER(mbs_on_close)
 {
-    mb_event_info_t *pevent_info = (mb_event_info_t *)data;
-    ESP_LOGD(TAG, "%s  %s, fd: %d", (char *)base, __func__, (int)pevent_info->opt_fd);
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
+    mb_event_info_t *event_info = (mb_event_info_t *)data;
+    ESP_LOGD(TAG, "%s  %s, fd: %d", (char *)base, __func__, (int)event_info->opt_fd);
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
+    mbs_tcp_port_t *port_obj = __containerof(drv_obj->parent, mbs_tcp_port_t, base);
     mb_node_info_t *pnode =NULL;
     // if close all sockets event is received
-    if (pevent_info->opt_fd < 0)
+    if (event_info->opt_fd < 0)
     {
-        (void)mb_drv_clear_status_flag(pdrv_ctx, MB_FLAG_DISCONNECTED);
+        (void)mb_drv_clear_status_flag(drv_obj, MB_FLAG_DISCONNECTED);
         for (int fd = 0; fd < MB_MAX_FDS; fd++)
         {
-            mb_node_info_t *pnode = mb_drv_get_node(pdrv_ctx, fd);
+            mb_node_info_t *pnode = mb_drv_get_node(drv_obj, fd);
             if (pnode && (MB_GET_NODE_STATE(pnode) >= MB_SOCK_STATE_OPENED)
-                      && FD_ISSET(pnode->index, &pdrv_ctx->open_set))
+                      && FD_ISSET(pnode->index, &drv_obj->open_set))
             {
-                mb_drv_close(pdrv_ctx, fd);
+                mb_drv_close(drv_obj, fd);
             }
         }
-        (void)mb_drv_set_status_flag(pdrv_ctx, MB_FLAG_DISCONNECTED);
+        (void)mb_drv_set_status_flag(drv_obj, MB_FLAG_DISCONNECTED);
         mb_drv_check_suspend_shutdown(ctx);
-    } else if (MB_CHECK_FD_RANGE(pevent_info->opt_fd)) {
-        pnode = mb_drv_get_node(pdrv_ctx, pevent_info->opt_fd);
+    } else if (MB_CHECK_FD_RANGE(event_info->opt_fd)) {
+        pnode = mb_drv_get_node(drv_obj, event_info->opt_fd);
         if (pnode && (MB_GET_NODE_STATE(pnode) >= MB_SOCK_STATE_OPENED)) {
-            if ((pnode->sock_id < 0) && FD_ISSET(pnode->sock_id, &pdrv_ctx->open_set)) {
-                mb_drv_close(ctx, pevent_info->opt_fd);
+            if ((pnode->sock_id < 0) && FD_ISSET(pnode->sock_id, &drv_obj->open_set)) {
+                mb_drv_lock(drv_obj);
+                (void)transaction_delete_by_node_id(port_obj->transaction, event_info->opt_fd);
+                mb_drv_unlock(drv_obj);
+                mb_drv_close(ctx, event_info->opt_fd);
             }
         }
         mb_drv_check_suspend_shutdown(ctx);
@@ -580,17 +643,24 @@ MB_EVENT_HANDLER(mbs_on_close)
 MB_EVENT_HANDLER(mbs_on_timeout)
 {
     // Slave timeout triggered
-    //mb_event_info_t *pevent_info = (mb_event_info_t *)data;
-    port_driver_t *pdrv_ctx = MB_GET_DRV_PTR(ctx);
+    //mb_event_info_t *event_info = (mb_event_info_t *)data;
+    port_driver_t *drv_obj = MB_GET_DRV_PTR(ctx);
+    mbs_tcp_port_t *port_obj = __containerof(drv_obj->parent, mbs_tcp_port_t, base);
     static int curr_fd = 0;
-    ESP_LOGD(TAG, "%s  %s: fd: %d, %d", (char *)base, __func__, (int)curr_fd, pdrv_ctx->node_conn_count);
+    mb_node_info_t *pnode = mb_drv_get_node(drv_obj, curr_fd);
+    ESP_LOGD(TAG, "%s %s: fd: %d, count: %d", (char *)base, __func__, (int)curr_fd, drv_obj->node_conn_count);
     mb_drv_check_suspend_shutdown(ctx);
-    int ret = mb_drv_check_node_state(pdrv_ctx, &curr_fd, MB_RECONNECT_TIME_MS);
+    int ret = mb_drv_check_node_state(drv_obj, &curr_fd, MB_TCP_KEEP_ALIVE_TOUT_MS);
     if ((ret != ERR_OK) && (ret != ERR_TIMEOUT)) {
-        ESP_LOGE(TAG, "Node: %d, connection lost, err= %d", curr_fd, ret);
-        mb_drv_close(pdrv_ctx, curr_fd);
+        ESP_LOGE(TAG, "%p, " MB_NODE_FMT(", connection lost, err=%d, drop connection."),
+                        port_obj, pnode->index, pnode->sock_id,
+                        pnode->addr_info.ip_addr_str, (int)ret);
+        mb_drv_lock(drv_obj);
+        (void)transaction_delete_by_node_id(port_obj->transaction, curr_fd);
+        mb_drv_unlock(drv_obj);
+        mb_drv_close(drv_obj, curr_fd);
     }
-    if ((curr_fd + 1) >= (pdrv_ctx->node_conn_count)) {
+    if ((curr_fd + 1) >= (drv_obj->node_conn_count)) {
         curr_fd = 0;
     } else {
         curr_fd++;

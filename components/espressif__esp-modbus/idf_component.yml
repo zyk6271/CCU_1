@@ -20,4 +20,4 @@ files:
   - '**/__pycache__/**/*'
   - '**/.pytest_cache/**/*'
 url: https://github.com/espressif/esp-modbus
-version: 2.1.0
+version: 2.1.1

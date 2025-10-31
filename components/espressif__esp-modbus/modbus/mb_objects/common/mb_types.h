@@ -43,7 +43,7 @@ extern "C" {
  * a low jitter. ASCII is slower and more reliable on slower links (E.g. modems)
  * The TCP or UDP mode is used for communication over ethernet. 
  */
-typedef enum _mb_comm_mode
+typedef enum mb_comm_mode_enum
 {
     MB_RTU,                     /*!< RTU transmission mode. */
     MB_ASCII,                   /*!< ASCII transmission mode. */
@@ -71,24 +71,20 @@ typedef enum
 /*! \ingroup modbus
  * \brief Event types used by all function in the protocol stack.
  */
-typedef enum _mb_event_enum {
+typedef enum mb_event_enum {
     EV_TRANS_START = 0x0001,                    /*!< Start of transaction. */
     EV_READY = 0x0002,                          /*!< Startup finished. */
     EV_FRAME_RECEIVED = 0x0004,                 /*!< Frame received. */
     EV_EXECUTE = 0x0008,                        /*!< Execute function. */
     EV_FRAME_TRANSMIT = 0x0010,                 /*!< Transmission started . */
     EV_FRAME_SENT = 0x0020,                     /*!< Frame sent. */
-    EV_ERROR_PROCESS = 0x0040,                  /*!< Error process state. */
-    EV_MASTER_ERROR_RESPOND_TIMEOUT = 0x0080,   /*!< Request respond timeout. */
-    EV_MASTER_ERROR_RECEIVE_DATA = 0x0100,      /*!< Request receive data error. */
-    EV_MASTER_ERROR_EXECUTE_FUNCTION = 0x0200,  /*!< Request execute function error. */
-    EV_MASTER_PROCESS_SUCCESS = 0x0400          /*!< Master error process. */
+    EV_ERROR_PROCESS = 0x0040                   /*!< Error process state. */
 } mb_event_enum_t;
 
 /*! \ingroup modbus
  * \brief Modbus exception types used in the stack.
  */
-typedef enum _mb_exception_enum
+typedef enum mb_exception_enum
 {
     MB_EX_NONE = 0x00,
     MB_EX_ILLEGAL_FUNCTION = 0x01,
@@ -108,19 +104,19 @@ typedef mb_exception_t (*mb_fn_handler_fp)(void *, uint8_t *frame_ptr, uint16_t 
 /*! \ingroup modbus
  * \brief Error event type
  */
-typedef enum _mb_err_event_enum {
-    EV_ERROR_INIT,             /*!< No error, initial state. */
-    EV_ERROR_RESPOND_TIMEOUT,  /*!< Slave respond timeout. */
-    EV_ERROR_RECEIVE_DATA,     /*!< Receive frame data error. */
-    EV_ERROR_EXECUTE_FUNCTION, /*!< Execute function error. */
-    EV_ERROR_OK                /*!< No error, processing completed. */
+typedef enum mb_err_event_enum {
+    EV_ERROR_INIT,                      /*!< No error, initial state. */
+    EV_ERROR_RESPOND_TIMEOUT = 0x01,    /*!< Slave respond timeout. */
+    EV_ERROR_RECEIVE_DATA = 0x02,       /*!< Receive frame data error. */
+    EV_ERROR_EXECUTE_FUNCTION = 0x04,   /*!< Execute function error. */
+    EV_ERROR_OK = 0x08                  /*!< No error, processing completed. */
 } mb_err_event_t;
 
-typedef struct _mb_event_t {
+typedef struct mb_event_s {
     mb_event_enum_t event;      /*!< event itself. */
     uint64_t trans_id;          /*!< unique transaction id */
     uint16_t length;            /*!< length of data accociated with the event */ 
-    void *pdata;                /*!< data accociated with the event */
+    void *data_ptr;             /*!< data accociated with the event */
     mb_err_event_t type;        /*!< error type accociated with the event */
     uint64_t post_ts;           /*!< timestamp of event posted */
     uint64_t get_ts;            /*!< timestamp of event receved */
@@ -150,9 +146,9 @@ typedef enum
  */
 typedef enum
 {
-	MB_TMODE_T35,                   /*!< Master receive frame T3.5 timeout. */
-	MB_TMODE_RESPOND_TIMEOUT,       /*!< Master wait respond for slave. */
-	MB_TMODE_CONVERT_DELAY          /*!< Master sent broadcast , then delay sometime.*/
+    MB_TMODE_T35,                   /*!< Master receive frame T3.5 timeout. */
+    MB_TMODE_RESPOND_TIMEOUT,       /*!< Master wait respond for slave. */
+    MB_TMODE_CONVERT_DELAY          /*!< Master sent broadcast , then delay sometime.*/
 } mb_timer_mode_enum_t;
 
 #ifdef __cplusplus

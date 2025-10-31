@@ -36,7 +36,7 @@ void reset_key_long_press_callback(void *parameter)
         if(reset_key_long_click == 0)
         {
             reset_key_long_click = 1;
-            smartconfig_reset();
+            wifi_config_process_start();
             ESP_LOGI(TAG,"reset_key_long_press_click");
         }
     }

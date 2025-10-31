@@ -431,7 +431,7 @@ void heater_noritz_data_handle(uint8_t offset)
 
             if(char_to_hex(info_frame.on_off_setting[0]) * 10 + char_to_hex(info_frame.on_off_setting[1]) == 0x20)
             {
-                smartconfig_reset();
+                wifi_config_process_start();
             }
             else
             {
