@@ -14,9 +14,9 @@
 static const char *TAG = "tcp_client";
 
 #define HOST_BUFSZ	 1024
-//#define HOST_IP     "smartdevice-uat.towngas-uat.com"
- #define HOST_IP     "smartdevice-dev.towngas.com"
-//#define HOST_IP     "smartdevice.towngas.com"
+// #define HOST_IP     "smartdevice-uat.towngas-uat.com"
+//#define HOST_IP     "smartdevice-dev.towngas.com"
+#define HOST_IP     "smartdevice.towngas.com"
 #define HOST_PORT    10020
 
 static int already_connected = 0;

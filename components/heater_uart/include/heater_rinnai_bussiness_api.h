@@ -17,7 +17,6 @@ typedef struct
     uint8_t heat_exchanger_temperature;
     uint8_t error_record[9];
     uint8_t gas_overflow;
-    double gas_consumption;
     uint8_t hot_water_overflow;
     double hot_water_consumption;
     uint8_t combustion_status;
