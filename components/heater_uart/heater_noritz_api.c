@@ -374,6 +374,16 @@ uint8_t heater_noritz_burn_status_read(void)
     return heater_noritz_info.combustion_status;
 }
 
+uint8_t heater_noritz_priority_read(void)
+{
+    return heater_noritz_info.current_priority_location;
+}
+
+uint8_t heater_noritz_eco_read(void)
+{
+    return heater_noritz_info.eco_status;
+}
+
 void heater_noritz_data_handle(uint8_t offset)
 {
     heater_noritz_uart_frame_t info_frame;
@@ -447,7 +457,7 @@ void heater_noritz_data_handle(uint8_t offset)
 
             if(char_to_hex(info_frame.on_off_setting[0]) * 10 + char_to_hex(info_frame.on_off_setting[1]) == 0x20)
             {
-                smartconfig_reset();
+                wifi_config_process_start();
             }
             else
             {
@@ -459,6 +469,7 @@ void heater_noritz_data_handle(uint8_t offset)
             ESP_LOGI(TAG,"heater_noritz eco_status %d",heater_noritz_info.eco_status);
             ESP_LOGI(TAG,"heater_noritz on_off_setting %d",heater_noritz_info.on_off_setting);
             ESP_LOGI(TAG,"heater_noritz circulation %d",heater_noritz_info.circulation_status);
+            ESP_LOGI(TAG,"heater_noritz current_priority_location %d",heater_noritz_info.current_priority_location);
             break;
         default:
             break;

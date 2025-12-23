@@ -6,6 +6,7 @@ typedef struct
     uint8_t onoff;
     uint8_t burn;
     uint8_t circle;
+    uint8_t eco;
 }heater_remote_state_t;
 
 typedef struct
@@ -30,5 +31,10 @@ void heater_remote_onoff_control(uint32_t addr, uint8_t value);
 uint8_t heater_remote_onoff_read(void);
 void heater_remote_circle_control(uint32_t addr, uint8_t value);
 uint8_t heater_remote_circle_read(void);
+uint8_t heater_remote_prio_valid_search(uint32_t addr);
 void heater_remote_prio_addr_control(uint32_t addr,uint8_t value);
 uint32_t heater_remote_prio_addr_read(void);
+void heater_remote_eco_control(uint32_t addr, uint8_t value);
+uint8_t heater_remote_eco_read(void);
+uint8_t heater_remote_priority_type_read(void);
+uint8_t heater_remote_prio_valid_check(uint32_t addr);

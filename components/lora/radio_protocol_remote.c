@@ -23,7 +23,7 @@ void radio_remote_command_send(tx_format *tx_frame)
     send_len = set_lora_tx_byte(send_len,tx_frame->tx_len);
     send_len = set_lora_tx_buffer(send_len,tx_frame->tx_data,tx_frame->tx_len);
     send_len = set_lora_tx_crc(send_len);
-    lora_tx_enqueue(get_lora_tx_buf(),send_len,tx_frame->parameter,0);
+    lora_tx_enqueue(get_lora_tx_buf(),send_len,tx_frame->need_ack,tx_frame->parameter);
 }
 
 static void radio_frame_remote_parse_learn(rx_format *rx_frame)
@@ -32,7 +32,6 @@ static void radio_frame_remote_parse_learn(rx_format *rx_frame)
     uint8_t sub_command = rx_frame->rx_data[2];
     tx_format tx_frame = {0};
 
-    //ESP_LOGI(pcTaskGetName(NULL), "radio_frame_remote_parse_learn,sub_command %d\r\n",sub_command);
     if(rx_frame->dest_addr == 0xFFFFFFFF && sub_command == 0x01)
     {
         if(allow_add_device)
@@ -50,6 +49,7 @@ static void radio_frame_remote_parse_learn(rx_format *rx_frame)
         tx_frame.command = LEARN_DEVICE_CMD;
         tx_frame.tx_data = &send_value;
         tx_frame.tx_len = 1;
+        tx_frame.parameter = 0;
         radio_remote_command_send(&tx_frame);
     }
     else if(rx_frame->dest_addr == radio_local_addr)
@@ -72,12 +72,39 @@ static void radio_frame_remote_parse_learn(rx_format *rx_frame)
             tx_frame.command = LEARN_DEVICE_CMD;
             tx_frame.tx_data = &send_value;
             tx_frame.tx_len = 1;
+            tx_frame.parameter = 0;
             radio_remote_command_send(&tx_frame);
             break;
         default:
             break;
         }
     }
+}
+
+void heater_remote_information_uplaod(uint32_t dest_addr,uint8_t msg_adv)
+{
+    uint8_t send_data[10] = {0};
+    send_data[0] = heater_remote_temp_read();
+    send_data[1] = heater_remote_onoff_read();
+    send_data[2] = heater_remote_burn_read();
+    send_data[3] = heater_remote_circle_read();
+    send_data[4] = heater_remote_eco_read();
+    send_data[5] = heater_remote_priority_type_read();
+    send_data[6] = (heater_remote_prio_addr_read() >> 24) %  0xFF;
+    send_data[7] = (heater_remote_prio_addr_read() >> 16) %  0xFF;
+    send_data[8] = (heater_remote_prio_addr_read() >> 8) %  0xFF;
+    send_data[9] = heater_remote_prio_addr_read() %  0xFF;
+
+    tx_format tx_frame = {0};
+    tx_frame.msg_adv = 1;
+    tx_frame.msg_type = MSG_UNCONFIRMED_DOWNLINK;
+    tx_frame.dest_addr = dest_addr;
+    tx_frame.source_addr = radio_local_addr;
+    tx_frame.command = HEART_UPLOAD_CMD;
+    tx_frame.tx_data = send_data;
+    tx_frame.tx_len = 10;
+    tx_frame.parameter = msg_adv;
+    radio_remote_command_send(&tx_frame);
 }
 
 static void radio_frame_remote_parse_heart_upload(rx_format *rx_frame)
@@ -88,6 +115,7 @@ static void radio_frame_remote_parse_heart_upload(rx_format *rx_frame)
         heater_remote_temp_control(rx_frame->source_addr, rx_frame->rx_data[2]);
         heater_remote_onoff_control(rx_frame->source_addr, rx_frame->rx_data[3]);
         heater_remote_circle_control(rx_frame->source_addr, rx_frame->rx_data[4]);
+        heater_remote_eco_control(rx_frame->source_addr, rx_frame->rx_data[6]);
         if(rx_frame->rx_data[3] == 1)
         {
             heater_remote_prio_addr_control(rx_frame->source_addr, 0);
@@ -98,111 +126,16 @@ static void radio_frame_remote_parse_heart_upload(rx_format *rx_frame)
         heater_remote_prio_addr_control(rx_frame->source_addr, 0);
     }
 
-    uint8_t send_data[8] = {0};
-    send_data[0] = heater_remote_temp_read();
-    send_data[1] = heater_remote_onoff_read();
-    send_data[2] = heater_remote_burn_read();
-    send_data[3] = heater_remote_circle_read();
-    send_data[4] = (heater_remote_prio_addr_read() >> 24) %  0xFF;
-    send_data[5] = (heater_remote_prio_addr_read() >> 16) %  0xFF;
-    send_data[6] = (heater_remote_prio_addr_read() >> 8) %  0xFF;
-    send_data[7] = heater_remote_prio_addr_read() %  0xFF;
-
     tx_format tx_frame = {0};
+    uint8_t prio_flag = heater_remote_prio_valid_search(rx_frame->source_addr);
     tx_frame.msg_adv = 0;
     tx_frame.msg_type = MSG_UNCONFIRMED_DOWNLINK;
     tx_frame.dest_addr = rx_frame->source_addr;
     tx_frame.source_addr = radio_local_addr;
-    tx_frame.command = HEART_UPLOAD_CMD;
-    tx_frame.tx_data = send_data;
-    tx_frame.tx_len = 8;
-    radio_remote_command_send(&tx_frame);
-}
-
-static void radio_frame_remote_parse_request_sync(rx_format *rx_frame)
-{
-    uint8_t send_data[8] = {0};
-    send_data[0] = heater_remote_temp_read();
-    send_data[1] = heater_remote_onoff_read();
-    send_data[2] = heater_remote_burn_read();
-    send_data[3] = heater_remote_circle_read();
-    send_data[4] = (heater_remote_prio_addr_read() >> 24) %  0xFF;
-    send_data[5] = (heater_remote_prio_addr_read() >> 16) %  0xFF;
-    send_data[6] = (heater_remote_prio_addr_read() >> 8) %  0xFF;
-    send_data[7] = heater_remote_prio_addr_read() %  0xFF;
-
-    tx_format tx_frame = {0};
-    tx_frame.msg_adv = 1;
-    tx_frame.msg_type = MSG_UNCONFIRMED_DOWNLINK;
-    tx_frame.dest_addr = rx_frame->source_addr;
-    tx_frame.source_addr = radio_local_addr;
-    tx_frame.command = REQUEST_SYNC_CMD;
-    tx_frame.tx_data = send_data;
-    tx_frame.tx_len = 8;
-    radio_remote_command_send(&tx_frame);
-}
-
-static void radio_frame_remote_parse_control_temp(rx_format *rx_frame)
-{
-    heater_remote_temp_control(rx_frame->source_addr,rx_frame->rx_data[2]);
-    uint8_t real_value = heater_remote_temp_read();
-
-    tx_format tx_frame = {0};
-    tx_frame.msg_adv = 0;
-    tx_frame.msg_type = MSG_UNCONFIRMED_DOWNLINK;
-    tx_frame.dest_addr = rx_frame->source_addr;
-    tx_frame.source_addr = radio_local_addr;
-    tx_frame.command = CONTROL_TEMP_CMD;
-    tx_frame.tx_data = &real_value;
+    tx_frame.command = ACK_RESPONSE_CMD;
+    tx_frame.tx_data = &prio_flag;
     tx_frame.tx_len = 1;
-    radio_remote_command_send(&tx_frame);
-}
-
-static void radio_frame_remote_parse_control_onoff(rx_format *rx_frame)
-{
-    heater_remote_onoff_control(rx_frame->source_addr,rx_frame->rx_data[2]);
-    uint8_t real_value = heater_remote_onoff_read();
-
-    tx_format tx_frame = {0};
-    tx_frame.msg_adv = 0;
-    tx_frame.msg_type = MSG_UNCONFIRMED_DOWNLINK;
-    tx_frame.dest_addr = rx_frame->source_addr;
-    tx_frame.source_addr = radio_local_addr;
-    tx_frame.command = CONTROL_ONOFF_CMD;
-    tx_frame.tx_data = &real_value;
-    tx_frame.tx_len = 1;
-    radio_remote_command_send(&tx_frame);
-}
-
-static void radio_frame_remote_parse_control_circle(rx_format *rx_frame)
-{
-    heater_remote_circle_control(rx_frame->source_addr,rx_frame->rx_data[2]);
-    uint8_t real_value = heater_remote_circle_read();
-
-    tx_format tx_frame = {0};
-    tx_frame.msg_adv = 0;
-    tx_frame.msg_type = MSG_UNCONFIRMED_DOWNLINK;
-    tx_frame.dest_addr = rx_frame->source_addr;
-    tx_frame.source_addr = radio_local_addr;
-    tx_frame.command = CONTROL_CIRCLE_CMD;
-    tx_frame.tx_data = &real_value;
-    tx_frame.tx_len = 1;
-    radio_remote_command_send(&tx_frame);
-}
-
-static void radio_frame_remote_parse_control_priority(rx_format *rx_frame)
-{
-    heater_remote_prio_addr_control(rx_frame->source_addr,rx_frame->rx_data[2]);
-    uint8_t real_value = heater_remote_prio_addr_read() == rx_frame->source_addr ? 1 : 0;
-
-    tx_format tx_frame = {0};
-    tx_frame.msg_adv = 0;
-    tx_frame.msg_type = MSG_UNCONFIRMED_DOWNLINK;
-    tx_frame.dest_addr = rx_frame->source_addr;
-    tx_frame.source_addr = radio_local_addr;
-    tx_frame.command = CONTROL_CIRCLE_CMD;
-    tx_frame.tx_data = &real_value;
-    tx_frame.tx_len = 1;
+    tx_frame.parameter = 0;
     radio_remote_command_send(&tx_frame);
 }
 
@@ -223,23 +156,11 @@ void radio_frame_remote_parse(rx_format *rx_frame)
     uint8_t command = rx_frame->rx_data[0];
     switch(command)
     {
-    case REQUEST_SYNC_CMD:
-        radio_frame_remote_parse_request_sync(rx_frame);
-        break;
     case HEART_UPLOAD_CMD:
         radio_frame_remote_parse_heart_upload(rx_frame);
         break;
-    case CONTROL_TEMP_CMD:
-        radio_frame_remote_parse_control_temp(rx_frame);
-        break;
-    case CONTROL_ONOFF_CMD:
-        radio_frame_remote_parse_control_onoff(rx_frame);
-        break;
-    case CONTROL_CIRCLE_CMD:
-        radio_frame_remote_parse_control_circle(rx_frame);
-        break;
-    case CONTROL_PRIORITY_CMD:
-        radio_frame_remote_parse_control_priority(rx_frame);
+    case SYNC_REQUEST_CMD:
+        heater_remote_information_uplaod(rx_frame->source_addr,0);
         break;
     default:
         break;

@@ -1,3 +1,5 @@
 void wifi_interface_init(void);
-void smartconfig_reset(void);
-uint64_t smartconfig_sem_get(void);
+void wifi_config_process_stop(void);
+void wifi_config_process_start(void);
+void smartconfig_wait_timer_start(void);
+void smartconfig_wait_timer_stop(void);

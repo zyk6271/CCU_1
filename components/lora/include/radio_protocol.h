@@ -24,6 +24,7 @@ typedef struct
     uint32_t dest_addr;
     uint32_t source_addr;
     uint8_t command;
+    uint8_t need_ack;
     uint8_t parameter;
     uint8_t *tx_data;
     uint8_t tx_len;

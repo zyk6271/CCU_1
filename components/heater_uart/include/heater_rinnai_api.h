@@ -66,5 +66,7 @@ uint8_t heater_rinnai_temp_read(void);
 uint8_t heater_rinnai_onoff_read(void);
 uint8_t heater_rinnai_circle_read(void);
 uint8_t heater_rinnai_burn_status_read(void);
+uint8_t heater_rinnai_priority_read(void);
+uint8_t heater_rinnai_eco_read(void);
 void heater_rinnai_data_handle(uint8_t offset);
 void wifi_rinnai_priority_timer_init(void);

@@ -322,7 +322,7 @@ void heater_uart_tx_queue_handle_callback(void *parameter)
         xQueueReceive(heater_tx_queue, (void*)&msg_ptr, portMAX_DELAY);
         uart_write_bytes(UART_NUM_0, msg_ptr.data_ptr, msg_ptr.data_size);
         //ESP_LOG_BUFFER_HEXDUMP("heater_uart_tx_queue", msg_ptr.data_ptr, msg_ptr.data_size, ESP_LOG_INFO);
-        vTaskDelay(pdMS_TO_TICKS(1200));
+        vTaskDelay(pdMS_TO_TICKS(1500));
     }
 }
 

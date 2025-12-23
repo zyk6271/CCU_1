@@ -67,4 +67,6 @@ uint8_t heater_noritz_temp_read(void);
 uint8_t heater_noritz_onoff_read(void);
 uint8_t heater_noritz_circle_read(void);
 uint8_t heater_noritz_burn_status_read(void);
+uint8_t heater_noritz_priority_read(void);
+uint8_t heater_noritz_eco_read(void);
 void heater_noritz_data_handle(uint8_t offset);

@@ -22,3 +22,5 @@ uint8_t heater_interface_burn_status_read(void);
 uint8_t heater_interface_power_value_read(void);
 uint8_t heater_interface_circulation_value_read(void);
 uint8_t heater_interface_temperature_value_read(void);
+uint8_t heater_interface_priority_read(void);
+uint8_t heater_interface_eco_read(void);

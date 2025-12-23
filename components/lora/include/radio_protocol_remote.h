@@ -3,15 +3,13 @@
 
 #include "radio_protocol.h"
 
-#define REQUEST_SYNC_CMD             0x01
+#define ACK_RESPONSE_CMD             0x01
 #define HEART_UPLOAD_CMD             0x02
-#define CONTROL_TEMP_CMD             0x03
-#define CONTROL_ONOFF_CMD            0x04
-#define CONTROL_CIRCLE_CMD           0x05
-#define CONTROL_PRIORITY_CMD         0x06
-#define LEARN_DEVICE_CMD             0x07
+#define LEARN_DEVICE_CMD             0x03
+#define SYNC_REQUEST_CMD             0x04
 
 void radio_frame_remote_parse(rx_format *rx_frame);
+void heater_remote_information_uplaod(uint32_t dest_addr,uint8_t msg_adv);
 
 #endif
 

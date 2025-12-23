@@ -143,6 +143,25 @@ void heater_interface_eco_setting(uint8_t value)
     }
 }
 
+uint8_t heater_interface_eco_read(void)
+{
+    uint8_t value = 0;
+    switch(device_type)
+    {
+        case HEATER_TYPE_NORITZ_HOME:
+            value = heater_noritz_eco_read();
+            break;
+        case HEATER_TYPE_RINNAI_HOME:
+            value = heater_rinnai_eco_read();
+            break;
+        default:
+            break;
+    }
+
+    return value;
+}
+
+
 void heater_interface_circulation_setting(uint8_t value)
 {
     switch(device_type)
@@ -228,4 +247,22 @@ void heater_interface_priority_setting(uint8_t value)
         default:
             break;
     }
+}
+
+uint8_t heater_interface_priority_read(void)
+{
+    uint8_t value = 0;
+    switch(device_type)
+    {
+        case HEATER_TYPE_NORITZ_HOME:
+            value = heater_noritz_priority_read();
+            break;
+        case HEATER_TYPE_RINNAI_HOME:
+            value = heater_rinnai_priority_read();
+            break;
+        default:
+            break;
+    }
+
+    return value;
 }

@@ -35,6 +35,9 @@
 #define HOST_ID SPI3_HOST
 #endif
 
+#define LORA_RECV_PREAMBLE_LENGTH	8
+#define LORA_SEND_PREAMBLE_LENGTH	1550
+
 static spi_device_handle_t SpiHandle;
 
 // Global Stuff
@@ -67,24 +70,6 @@ void LoRaErrorDefault(int error)
 }
 
 __attribute__ ((weak, alias ("LoRaErrorDefault"))) void LoRaError(int error);
-
-// void lora_task_rx(void *pvParameters)
-// {
-// 	uint8_t buf[255]; // Maximum Payload size of SX1261/62/68 is 255
-// 	while(1) {
-// 		uint8_t rxLen = LoRaReceive(buf, sizeof(buf));
-// 		if ( rxLen > 0 ) { 
-// 			ESP_LOGI(pcTaskGetName(NULL), "%d byte packet received:", rxLen);
-//             ESP_LOG_BUFFER_HEX(pcTaskGetName(NULL), buf, rxLen);
-
-// 			int8_t rssi, snr;
-// 			GetPacketStatus(&rssi, &snr);
-// 			ESP_LOGI(pcTaskGetName(NULL), "rssi=%d[dBm] snr=%d[dB]", rssi, snr);
-//             radio_protocol_parse(rssi,snr,buf,rxLen);
-//         }
-// 		vTaskDelay(pdMS_TO_TICKS(5)); // Avoid WatchDog alerts
-// 	}
-// }
 
 void lora_task_handle(void *pvParameters)
 {
@@ -123,22 +108,12 @@ void lora_task_handle(void *pvParameters)
                     txActive = false;
                     if (irqRegs & SX126X_IRQ_TX_DONE) 
 					{
+						ESP_LOGI(TAG, "SX126X_IRQ_TX_DONE");
                         // 发送成功处理
                     }
                     SetRx(0xFFFFFF); // 返回接收模式
                 }
             }
-			// uint8_t rxLen = LoRaReceive(buf, sizeof(buf));
-			// if ( rxLen > 0 ) { 
-			// 	ESP_LOGI(pcTaskGetName(NULL), "%d byte packet received:", rxLen);
-			// 	ESP_LOG_BUFFER_HEX(pcTaskGetName(NULL), buf, rxLen);
-
-			// 	int8_t rssi, snr;
-			// 	GetPacketStatus(&rssi, &snr);
-			// 	ESP_LOGI(pcTaskGetName(NULL), "rssi=%d[dBm] snr=%d[dB]", rssi, snr);
-			// 	radio_protocol_parse(rssi,snr,buf,rxLen);
-			// }
-			// vTaskDelay(pdMS_TO_TICKS(5)); // Avoid WatchDog alerts
 		}
 	}
 }
@@ -241,7 +216,7 @@ void radio_init(void)
 	uint8_t spreadingFactor = 7;
 	uint8_t bandwidth = 4;
 	uint8_t codingRate = 1;
-	uint16_t preambleLength = 8;
+	uint16_t preambleLength = LORA_RECV_PREAMBLE_LENGTH;
 	uint8_t payloadLen = 0;
 	bool crcOn = true;
 	bool invertIrq = true;
@@ -250,6 +225,22 @@ void radio_init(void)
     xTaskCreate(&lora_task_handle, "lora_task_handle", 4096, NULL, 3, NULL);
 	
 	lora_drv_init = 1;
+}
+
+void lora_send_preamble_length_set(uint8_t cad_flag)
+{
+	uint16_t preamble_length = 0;
+	if(cad_flag)
+	{
+		preamble_length = LORA_SEND_PREAMBLE_LENGTH;
+	}
+	else
+	{
+		preamble_length = LORA_RECV_PREAMBLE_LENGTH;
+	}
+	PacketParams[0] = (preamble_length >> 8) & 0xFF;
+	PacketParams[1] = preamble_length;
+	WriteCommand(SX126X_CMD_SET_PACKET_PARAMS, PacketParams, 6); // 0x8C
 }
 
 void spi_write_byte(uint8_t* Dataout, size_t DataLength )
@@ -452,13 +443,18 @@ bool LoRaSend(uint8_t *pData, int16_t len, uint8_t mode)
 		if (PacketParams[2] == 0x00) { // Variable length packet (explicit header)
 			PacketParams[3] = len;
 		}
+
+		// uint16_t preamble_length = LORA_SEND_PREAMBLE_LENGTH;
+		// PacketParams[0] = (preamble_length >> 8) & 0xFF;
+		// PacketParams[1] = preamble_length;
+
 		WriteCommand(SX126X_CMD_SET_PACKET_PARAMS, PacketParams, 6); // 0x8C
 		
 		//ClearIrqStatus(SX126X_IRQ_TX_DONE | SX126X_IRQ_TIMEOUT);
 		ClearIrqStatus(SX126X_IRQ_ALL);
 		
 		WriteBuffer(pData, len);
-		SetTx(500);
+		SetTx(2000);
 
 		if ( mode & SX126x_TXMODE_SYNC )
 		{
@@ -832,6 +828,11 @@ void SetRx(uint32_t timeout)
 	buf[1] = (uint8_t)((timeout >> 8) & 0xFF);
 	buf[2] = (uint8_t)(timeout & 0xFF);
 	WriteCommand(SX126X_CMD_SET_RX, buf, 3); // 0x82
+
+	PacketParams[0] = (LORA_RECV_PREAMBLE_LENGTH >> 8) & 0xFF;
+	PacketParams[1] = LORA_RECV_PREAMBLE_LENGTH;
+
+	WriteCommand(SX126X_CMD_SET_PACKET_PARAMS, PacketParams, 6); // 0x8C
 
 	for(int retry=0;retry<10;retry++) {
 		if ((GetStatus() & 0x70) == 0x50) break;

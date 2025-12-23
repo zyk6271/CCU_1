@@ -447,6 +447,16 @@ uint8_t heater_rinnai_burn_status_read(void)
     return heater_rinnai_info.combustion_status;
 }
 
+uint8_t heater_rinnai_priority_read(void)
+{
+    return heater_rinnai_info.current_priority_location;
+}
+
+uint8_t heater_rinnai_eco_read(void)
+{
+    return heater_rinnai_info.eco_status;
+}
+
 void heater_rinnai_data_handle(uint8_t offset)
 {
     heater_rinnai_uart_frame_t info_frame;
@@ -517,7 +527,7 @@ void heater_rinnai_data_handle(uint8_t offset)
             
             if((char_to_hex(info_frame.on_off_setting[0]) << 4 | char_to_hex(info_frame.on_off_setting[1])) == 0x20)
             {
-                smartconfig_reset();
+                wifi_config_process_start();
             }
             else
             {
@@ -534,6 +544,11 @@ void heater_rinnai_data_handle(uint8_t offset)
                 }
             }
             ESP_LOGI(TAG,"heater_rinnai read state information success");
+            ESP_LOGI(TAG,"heater_rinnai temperature %d",heater_rinnai_info.current_temperature_setting);
+            ESP_LOGI(TAG,"heater_rinnai eco_status %d",heater_rinnai_info.eco_status);
+            ESP_LOGI(TAG,"heater_rinnai on_off_setting %d",heater_rinnai_info.on_off_setting);
+            ESP_LOGI(TAG,"heater_rinnai circulation %d",heater_rinnai_info.circulation_status);
+            ESP_LOGI(TAG,"heater_rinnai current_priority_location %d",heater_rinnai_info.current_priority_location);
             wifi_rinnai_command_info_upload();
             heater_remote_data_refresh();
             break;
