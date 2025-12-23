@@ -71,6 +71,7 @@ uint8_t modbus_ultra_sonic_gas_meter_value[16] = {0};
 uint8_t modbus_gas_steamer_value[10] = {0};
 uint8_t modbus_gas_wok_value[8] = {0};
 
+uint8_t modbus_device_valid[12] = {0};
 uint8_t modbus_read_temp[128] = {0};   
 
 extern uint8_t smartconfig_start_flag;    
@@ -436,7 +437,7 @@ void ccu_poll_status_reset(void)
     memset(modbus_gas_wok_value,0,sizeof(modbus_gas_wok_value));
 }
 
-void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,void (*mb_callback)(void))
+void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,uint8_t device_valid_id, void (*mb_callback)(void))
 {
     uint8_t type = 0;  
     esp_err_t err = ESP_OK;
@@ -448,6 +449,7 @@ void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,void (*mb_cal
         err = mbc_master_get_parameter(ccu_modbus_handle, param_descriptor->cid, modbus_read_temp, &type);
         if (err == ESP_OK) 
         {
+            modbus_device_valid[device_valid_id] = 1;
             modbus_detect_result = 1;
             if(memcmp(value_temp,modbus_read_temp,param_descriptor->param_size) == 0)
             {
@@ -458,7 +460,9 @@ void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,void (*mb_cal
                 memcpy(value_temp,modbus_read_temp,param_descriptor->param_size);
                 ESP_LOGI(TAG, "%s modbus value has change\r\n",param_descriptor->param_key);
                 //ESP_LOG_BUFFER_HEXDUMP("modbus_recv_buf", modbus_read_temp, param_descriptor->param_size, ESP_LOG_INFO);
+#if MODBUS_DIFFERENCE_UPLOAD == 1
                 mb_callback();
+#endif
             }
         } 
     }
@@ -472,62 +476,53 @@ void ccu_modbus_poll(void)
         return;
     }
 
-    ccu_modbus_poll_select(CID_GAS_FLOW_SENSOR,modbus_gas_flow_sensor_value,gas_flow_sensor_info_upload);
-    ccu_modbus_poll_select(CID_FRIDGE,modbus_fridge_value,fridge_info_upload);
-    ccu_modbus_poll_select(CID_CURRENTWATCH,modbus_currentwatch_value,currentwatch_info_upload);
-    ccu_modbus_poll_select(CID_DRYCONTACT,modbus_drycontact_value,drycontact_sensor_info_upload);
-    ccu_modbus_poll_select(CID_DISHWASHER,modbus_dishwasher_value,dish_washer_info_upload);
-    ccu_modbus_poll_select(CID_GAS_CONCENTRATION_SENSOR,modbus_gas_concentration_sensor_value,gas_concentration_sensor_info_upload);
-    ccu_modbus_poll_select(CID_ULTRA_SONIC_GAS_METER,modbus_ultra_sonic_gas_meter_value,ultra_sonic_gas_meter_info_upload);
-    ccu_modbus_poll_select(CID_GAS_STEAMER,modbus_gas_steamer_value,gas_steamer_info_upload);
-    ccu_modbus_poll_select(CID_GAS_WOK,modbus_gas_wok_value,gas_wok_info_upload);
-}
-
-bool isArrayEmpty(uint8_t *array, int size) {
-    for (int i = 0; i < size; i++) {
-        if (array[i] != 0) { // 检查是否有非零元素
-            return false; // 如果找到非零元素，返回false，即数组不为空
-        }
-    }
-
-    return true; // 如果所有元素都是0，返回true，即数组为空（在这个上下文中认为是空的）
+    ccu_modbus_poll_select(CID_GAS_FLOW_SENSOR,modbus_gas_flow_sensor_value,0,gas_flow_sensor_info_upload);
+    ccu_modbus_poll_select(CID_FRIDGE,modbus_fridge_value,1,fridge_info_upload);
+    ccu_modbus_poll_select(CID_CURRENTWATCH,modbus_currentwatch_value,2,currentwatch_info_upload);
+    ccu_modbus_poll_select(CID_DRYCONTACT,modbus_drycontact_value,3,drycontact_sensor_info_upload);
+    ccu_modbus_poll_select(CID_DISHWASHER,modbus_dishwasher_value,4,dish_washer_info_upload);
+    ccu_modbus_poll_select(CID_GAS_CONCENTRATION_SENSOR,modbus_gas_concentration_sensor_value,5,gas_concentration_sensor_info_upload);
+    ccu_modbus_poll_select(CID_ULTRA_SONIC_GAS_METER,modbus_ultra_sonic_gas_meter_value,6,ultra_sonic_gas_meter_info_upload);
+    ccu_modbus_poll_select(CID_GAS_STEAMER,modbus_gas_steamer_value,7,gas_steamer_info_upload);
+    ccu_modbus_poll_select(CID_GAS_WOK,modbus_gas_wok_value,8,gas_wok_info_upload);
 }
 
 void wifi_ccu_modbus_poll_upload(void)
 {
-    if(isArrayEmpty(modbus_gas_flow_sensor_value,sizeof(modbus_gas_flow_sensor_value)) == 0)
+    ESP_LOG_BUFFER_HEXDUMP("wifi_ccu_modbus_poll_upload", modbus_device_valid, 12, ESP_LOG_INFO);
+    if(modbus_device_valid[0])
     {
         gas_flow_sensor_info_upload();
     }
-    if(isArrayEmpty(modbus_fridge_value,sizeof(modbus_fridge_value)) == 0)
+    if(modbus_device_valid[1])
     {
         fridge_info_upload();
     }
-    if(isArrayEmpty(modbus_currentwatch_value,sizeof(modbus_currentwatch_value)) == 0)
+    if(modbus_device_valid[2])
     {
         currentwatch_info_upload();
     }
-    if(isArrayEmpty(modbus_drycontact_value,sizeof(modbus_drycontact_value)) == 0)
+    if(modbus_device_valid[3])
     {
         drycontact_sensor_info_upload();
     }
-    if(isArrayEmpty(modbus_dishwasher_value,sizeof(modbus_dishwasher_value)) == 0)
+    if(modbus_device_valid[4])
     {
         dish_washer_info_upload();
     }
-    if(isArrayEmpty(modbus_gas_concentration_sensor_value,sizeof(modbus_gas_concentration_sensor_value)) == 0)
+    if(modbus_device_valid[5])
     {
         gas_concentration_sensor_info_upload();
     }
-    if(isArrayEmpty(modbus_ultra_sonic_gas_meter_value,sizeof(modbus_ultra_sonic_gas_meter_value)) == 0)
+    if(modbus_device_valid[6])
     {
         ultra_sonic_gas_meter_info_upload();
     }
-    if(isArrayEmpty(modbus_gas_steamer_value,sizeof(modbus_gas_steamer_value)) == 0)
+    if(modbus_device_valid[7])
     {
         gas_steamer_info_upload();
     }
-    if(isArrayEmpty(modbus_gas_wok_value,sizeof(modbus_gas_wok_value)) == 0)
+    if(modbus_device_valid[8])
     {
         gas_wok_info_upload();
     }

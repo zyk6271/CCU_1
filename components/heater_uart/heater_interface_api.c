@@ -12,11 +12,14 @@
 #include "ccu_modbus_api.h"
 #include "esp_log.h"
 
-uint8_t device_type = MODBUS_TYPE_DISHWASHER;
+static const char *TAG = "heater_interface";
+
+uint8_t device_type = HEATER_TYPE_RINNAL_BUSINESS;
 
 void hearter_device_type_set(uint8_t type)
 {
     device_type = type;
+    ESP_LOGI(TAG, "hearter_device_type_set to %d",type);
 }
 
 uint8_t hearter_device_type_get(void)

@@ -21,9 +21,9 @@
 #include "esp_log.h"
 
 esp_timer_handle_t heater_heart_timer;
-// esp_timer_handle_t heater_poll_upload_timer;
-// esp_timer_handle_t heater_poll_timer;
-// esp_timer_handle_t heater_detect_timer;
+esp_timer_handle_t heater_poll_upload_timer;
+esp_timer_handle_t heater_poll_timer;
+esp_timer_handle_t heater_detect_timer;
 
 uint8_t tcp_send_count = 0x01;
 uint8_t heater_detect_done = 0;
@@ -75,22 +75,33 @@ void wifi_heater_common_heart_upload(void)
     free(encrypt_ptr);
 }
 
+static void heater_poll_upload_timer_callback(void* arg)
+{
+    heater_interface_status_reset();
+}
+#if HEATER_INTERFACE_TYPE == 1
 static void heater_heart_timer_callback(void* arg)
 {
-    extern void wifi_ccu_modbus_poll_upload(void);
-    wifi_ccu_modbus_poll_upload();
-    //wifi_heater_common_heart_upload();
-    // if(heater_detect_done == 1 && smartconfig_start_flag == 0)
-    // {
-    //     wifi_heater_common_heart_upload();
-    //     esp_timer_start_once(heater_poll_upload_timer, 15 * 1000 * 1000);
-    // }
+    if(heater_detect_done == 1 && smartconfig_start_flag == 0)
+    {
+        wifi_heater_common_heart_upload();
+        esp_timer_start_once(heater_poll_upload_timer, 15 * 1000 * 1000);
+    }
 }
-
+#else
+static void heater_heart_timer_callback(void* arg)
+{
+    wifi_ccu_modbus_poll_upload();
+}
+#endif
 void heater_heart_timer_start(void)
 {
     esp_timer_stop(heater_heart_timer);
-    esp_timer_start_periodic(heater_heart_timer, 300 * 1000 * 1000);
+#if HEATER_INTERFACE_TYPE == 1
+    esp_timer_start_periodic(heater_heart_timer, HEATER_HEART_PERIOD * 1000 * 1000);
+#else
+    esp_timer_start_periodic(heater_heart_timer, HEATER_HEART_PERIOD * 1000 * 1000);
+#endif
 }
 
 void heater_heart_timer_stop(void)
@@ -106,77 +117,127 @@ void heater_heart_timer_init(void)
         .name = "heater_heart_timer"
     };
 
-    // const esp_timer_create_args_t heater_poll_upload_timer_args = 
-    // {
-    //     .callback = &heater_poll_upload_timer_callback,
-    //     .name = "heater_poll_upload_timer"
-    // };
+    const esp_timer_create_args_t heater_poll_upload_timer_args = 
+    {
+        .callback = &heater_poll_upload_timer_callback,
+        .name = "heater_poll_upload_timer"
+    };
     
     ESP_ERROR_CHECK(esp_timer_create(&heart_timer_args, &heater_heart_timer));
+#if HEATER_INTERFACE_TYPE == 1
+    ESP_ERROR_CHECK(esp_timer_create(&heater_poll_upload_timer_args, &heater_poll_upload_timer));
+#else
     esp_timer_start_periodic(heater_heart_timer, 300 * 1000 * 1000);
-    // ESP_ERROR_CHECK(esp_timer_create(&heater_poll_upload_timer_args, &heater_poll_upload_timer));
+#endif
 }
 
-// static void heater_poll_timer_callback(void* arg)
-// {
-    // if(heater_detect_done == 1 && smartconfig_start_flag == 0)
-    // {
-    //     ccu_modbus_poll();
-    // }
-// }
+static void heater_poll_timer_callback(void* arg)
+{
+    if(heater_detect_done == 1 && smartconfig_start_flag == 0)
+    {
+#if HEATER_INTERFACE_TYPE == 1
+        if(hearter_device_type_get() == HEATER_TYPE_RINNAL_BUSINESS)
+        {
+            heater_rinnai_bussiness_poll_callback();
+        }
+        else
+        {
+            heater_interface_error_read();
+        }
+#else
+        ccu_modbus_poll();
+#endif
+    }
+}
 
 void heater_poll_timer_start(void)
 {
-    // esp_timer_stop(heater_poll_timer);
-    // esp_timer_start_periodic(heater_poll_timer, 2000 * 1000);
+    esp_timer_stop(heater_poll_timer);
+#if HEATER_INTERFACE_TYPE == 1
+    if(hearter_device_type_get() == HEATER_TYPE_RINNAL_BUSINESS)
+    {
+        esp_timer_start_periodic(heater_poll_timer, 1500 * 1000);
+    }
+    else
+    {
+        esp_timer_start_periodic(heater_poll_timer, 5 * 1000 * 1000);
+    }
+#else
+        esp_timer_start_periodic(heater_poll_timer, 2000 * 1000);
+#endif
+
 }
 
 void heater_poll_timer_init(void)
 {
-    // const esp_timer_create_args_t timer_args = 
-    // {
-    //     .callback = &heater_poll_timer_callback,
-    //     .name = "heater_poll_timer"
-    // };
+    const esp_timer_create_args_t timer_args = 
+    {
+        .callback = &heater_poll_timer_callback,
+        .name = "heater_poll_timer"
+    };
     
-    // ESP_ERROR_CHECK(esp_timer_create(&timer_args, &heater_poll_timer));
-    // esp_timer_start_periodic(heater_poll_timer, 2000 * 1000);
+    ESP_ERROR_CHECK(esp_timer_create(&timer_args, &heater_poll_timer));
+#if HEATER_INTERFACE_TYPE == 2
+    esp_timer_start_periodic(heater_poll_timer, 2000 * 1000);
+#endif
 }
 
 void heater_detect_finish(uint8_t value)
 {
-    // if(heater_detect_done == 0 && smartconfig_start_flag == 0)
-    // {
-    //     hearter_device_type_set(value);
-    //     heater_detect_done = 1;
-    //     esp_timer_stop(heater_detect_timer);
-    //     heater_poll_timer_start();
-    //     heater_heart_timer_start();
-    // }
+    if(heater_detect_done == 0 && smartconfig_start_flag == 0)
+    {
+        hearter_device_type_set(value);
+        heater_detect_done = 1;
+        esp_timer_stop(heater_detect_timer);
+        heater_poll_timer_start();
+#if HEATER_HEART_ENABLED == 1
+        heater_heart_timer_start();
+#endif
+    }
 }
 
-// static void heater_detect_timer_callback(void* arg)
-// {
+static void heater_detect_timer_callback(void* arg)
+{
+#if HEATER_INTERFACE_TYPE == 1
+    static uint8_t heater_detect_try = 0;
+    switch(heater_detect_try)
+    {
+        case 0:
+            heater_detect_try = 1;
+            heater_noritz_info_read();
+            break;
+        case 1:
+            heater_detect_try = 2;
+            heater_rinnai_info_read();
+            break;
+        case 2:
+            heater_detect_try = 0;
+            heater_rinnai_bussiness_info_read();
+            break;
+        default:
+            break;
+    }
+#else
     // if(modbus_detect_result_read() == 1)
     // {
     //     if(heater_detect_done == 0 && smartconfig_start_flag == 0)
     //     {
     //         heater_detect_done = 1;
     //         esp_timer_stop(heater_detect_timer);
-    //         //heater_poll_timer_start();
     //         heater_heart_timer_start();
     //     }
     // }
-// }
+#endif
+}
 
 void heater_detect_timer_init(void)
 {
-    // const esp_timer_create_args_t timer_args = 
-    // {
-    //     .callback = &heater_detect_timer_callback,
-    //     .name = "heater_detect_timer"
-    // };
+    const esp_timer_create_args_t timer_args = 
+    {
+        .callback = &heater_detect_timer_callback,
+        .name = "heater_detect_timer"
+    };
     
-    // ESP_ERROR_CHECK(esp_timer_create(&timer_args, &heater_detect_timer));
-    // esp_timer_start_periodic(heater_detect_timer, 2000 * 1000);
+    ESP_ERROR_CHECK(esp_timer_create(&timer_args, &heater_detect_timer));
+    esp_timer_start_periodic(heater_detect_timer, 2000 * 1000);
 }

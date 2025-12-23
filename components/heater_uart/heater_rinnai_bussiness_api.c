@@ -48,6 +48,7 @@ uint8_t heater_rinnai_bussiness_data_length_find(uint64_t command)
 void heater_rinnai_bussiness_poll_callback(void)
 {
     static uint8_t read_id = 0;
+    static uint8_t upload_cnt = 0;
     switch(read_id++)
     {
         case 0:
@@ -84,7 +85,11 @@ void heater_rinnai_bussiness_poll_callback(void)
             read_id = 0;
             break;
     }
-    wifi_rinnai_bussiness_command_info_upload();
+    if(upload_cnt++ > 200)
+    {
+        upload_cnt = 0;
+        wifi_rinnai_bussiness_command_info_upload();
+    }
 }
 
 void heater_rinnai_bussiness_poll_status_resset(void)
@@ -307,6 +312,7 @@ void wifi_rinnai_bussiness_command_info_upload(void)
     uint32_t encrypt_size = 0;
 
     //copy data
+    static double gas_consumption = 0;
     heater_rinnai_bussiness_info_t heater_rinnai_bussiness_info_temp = {0};
     memcpy(&heater_rinnai_bussiness_info_temp,&heater_rinnai_bussiness_info,sizeof(heater_rinnai_bussiness_info_t));
 
@@ -319,11 +325,11 @@ void wifi_rinnai_bussiness_command_info_upload(void)
     {
         if(heater_rinnai_bussiness_info_temp.current_temperature_setting == 80)
         {
-            heater_rinnai_bussiness_info_temp.gas_consumption = (((heater_rinnai_bussiness_info_temp.total_flow_rate / 5.5 * 88.2) + 37.8) * 1000 / 240 / 128) + heater_rinnai_bussiness_info_last.gas_consumption;
+            gas_consumption += (((heater_rinnai_bussiness_info_temp.total_flow_rate / 5.5 * 88.2) + 37.8) * 1000 / 240 / 128) ;
         }
         else
         {
-            heater_rinnai_bussiness_info_temp.gas_consumption = (((heater_rinnai_bussiness_info_temp.total_flow_rate / 10 * 88.2) + 37.8) * 1000 / 240 / 128) + heater_rinnai_bussiness_info_last.gas_consumption;
+            gas_consumption += (((heater_rinnai_bussiness_info_temp.total_flow_rate / 10 * 88.2) + 37.8) * 1000 / 240 / 128);
         }
     }
 
@@ -379,8 +385,8 @@ void wifi_rinnai_bussiness_command_info_upload(void)
     plain_buf[29] = heater_rinnai_bussiness_info_temp.gas_overflow;
     if(heater_rinnai_bussiness_info_temp.combustion_status)
     {
-        plain_buf[30] = ((uint32_t)heater_rinnai_bussiness_info_temp.gas_consumption) & 0xFF;
-        plain_buf[31] = ((uint32_t)(heater_rinnai_bussiness_info_temp.gas_consumption) >> 8) & 0xFF;
+        plain_buf[30] = ((uint32_t)gas_consumption) & 0xFF;
+        plain_buf[31] = ((uint32_t)(gas_consumption) >> 8) & 0xFF;
     }
 
     plain_buf[32] = heater_rinnai_bussiness_info_temp.hot_water_overflow;
@@ -421,7 +427,7 @@ void heater_rinnai_bussiness_data_handle(uint8_t offset)
     {
         case 0x3331343032:
             heater_rinnai_bussiness_info.error = char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START]) |
-                                                        char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 3] << 4);
+                                                        char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 3])* 10;
             ESP_LOGI(TAG,"heater_rinnai_bussiness_info error is [%02X]",heater_rinnai_bussiness_info.error);
             heater_detect_finish(HEATER_TYPE_RINNAL_BUSINESS);
             break;

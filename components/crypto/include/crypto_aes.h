@@ -12,6 +12,8 @@
 
 #include "stdint.h"
 
+#define CRYPTO_ENABLED  1
+
 void crypto_initialize(void);
 void crypto_remote_parse(const unsigned char value[]);
 int crypto_aes_local_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** output, uint32_t *output_length);

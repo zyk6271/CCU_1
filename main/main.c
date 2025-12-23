@@ -11,6 +11,7 @@
 #include "wifi_manager.h"
 #include "key.h"
 #include "heater_uart.h"
+#include "heater_interface_api.h"
 #include "ccu_modbus_api.h"
 
 static const char *TAG = "main";
@@ -27,5 +28,9 @@ void app_main(void)
     crypto_initialize();
     wifi_interface_init();
     wifi_service_init();
+#if HEATER_INTERFACE_TYPE == 1
+    heter_uart_init();
+#else
     ccu_modbus_init();
+#endif
 }

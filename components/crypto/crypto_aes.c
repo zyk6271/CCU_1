@@ -52,6 +52,7 @@ int crypto_aes_local_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** ou
 {
     int result = 0;
 
+#if CRYPTO_ENABLED == 1
     int remainder = plain_size % 16;
     int paddedSize = plain_size + (16 - remainder);
 
@@ -76,6 +77,17 @@ int crypto_aes_local_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** ou
     result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_ENCRYPT, paddedSize, iv, dataBuffer, encrypted);
     *output = encrypted;
     *output_length = paddedSize;
+#else
+    // 分配内存用于复制源数据
+    uint8_t* output_buffer = (uint8_t*)malloc(plain_size);
+    
+    // 直接复制源数据
+    memcpy(output_buffer, plain_buffer, plain_size);
+    
+    // 设置输出参数
+    *output = output_buffer;
+    *output_length = plain_size;
+#endif
 
     return result;
 }
@@ -84,6 +96,7 @@ int crypto_aes_local_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **
 {
     int result = 0;
 
+#if CRYPTO_ENABLED == 1
     uint8_t iv[16] = {0};
     memcpy(iv,Local_AES_IV,16);
 
@@ -95,6 +108,17 @@ int crypto_aes_local_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **
     *output = decrypted;
     *output_length = decrypt_size;
 
+#else
+    uint8_t* output_buffer = (uint8_t*)malloc(decrypt_size);
+    
+    // 直接复制源数据
+    memcpy(output_buffer, decrypt_buffer, decrypt_size);
+    
+    // 设置输出参数
+    *output = output_buffer;
+    *output_length = decrypt_size;
+#endif
+
     return result;
 }
 
@@ -102,31 +126,32 @@ int crypto_aes_remote_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** o
 {
     int result = 0;
 
-    // int remainder = plain_size % 16;
-    // int paddedSize = plain_size + (16 - remainder);
+#if CRYPTO_ENABLED == 1
+    int remainder = plain_size % 16;
+    int paddedSize = plain_size + (16 - remainder);
 
-    // uint8_t* encrypted = (uint8_t*) malloc((paddedSize) * sizeof(uint8_t));
+    uint8_t* encrypted = (uint8_t*) malloc((paddedSize) * sizeof(uint8_t));
 
-    // uint8_t iv[16] = {0};
-    // memcpy(iv,Remote_AES_IV,16);
+    uint8_t iv[16] = {0};
+    memcpy(iv,Remote_AES_IV,16);
 
-    // uint8_t dataBuffer[paddedSize];
-    // memcpy(dataBuffer, plain_buffer, plain_size);
+    uint8_t dataBuffer[paddedSize];
+    memcpy(dataBuffer, plain_buffer, plain_size);
 
-    // esp_aes_setkey(&aes_handle, Remote_AES_Key, 256);
+    esp_aes_setkey(&aes_handle, Remote_AES_Key, 256);
 
-    // if (remainder > 0) {
-    //     // 填充剩余部分
-    //     for (int i = plain_size; i < paddedSize; i++)
-    //     {
-    //         dataBuffer[i] = 0;
-    //     }
-    // }
+    if (remainder > 0) {
+        // 填充剩余部分
+        for (int i = plain_size; i < paddedSize; i++)
+        {
+            dataBuffer[i] = 0;
+        }
+    }
 
-    // result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_ENCRYPT, paddedSize, iv, dataBuffer, encrypted);
-    // *output = encrypted;
-    // *output_length = paddedSize;
-
+    result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_ENCRYPT, paddedSize, iv, dataBuffer, encrypted);
+    *output = encrypted;
+    *output_length = paddedSize;
+#else
     // 分配内存用于复制源数据
     uint8_t* output_buffer = (uint8_t*)malloc(plain_size);
     
@@ -136,6 +161,7 @@ int crypto_aes_remote_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** o
     // 设置输出参数
     *output = output_buffer;
     *output_length = plain_size;
+#endif
 
     return result;
 }
@@ -144,17 +170,18 @@ int crypto_aes_remote_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t *
 {
     int result = 0;
 
-    // uint8_t iv[16] = {0};
-    // memcpy(iv,Remote_AES_IV,16);
+#if CRYPTO_ENABLED == 1
+    uint8_t iv[16] = {0};
+    memcpy(iv,Remote_AES_IV,16);
 
-    // uint8_t* decrypted = (uint8_t*) malloc((decrypt_size) * sizeof(uint8_t));
+    uint8_t* decrypted = (uint8_t*) malloc((decrypt_size) * sizeof(uint8_t));
 
-    // esp_aes_setkey(&aes_handle, Remote_AES_Key, sizeof(Local_AES_Key));
+    esp_aes_setkey(&aes_handle, Remote_AES_Key, sizeof(Local_AES_Key));
 
-    // result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_DECRYPT, decrypt_size, iv, decrypt_buffer, decrypted);
-    // *output = decrypted;
-    // *output_length = decrypt_size;
-
+    result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_DECRYPT, decrypt_size, iv, decrypt_buffer, decrypted);
+    *output = decrypted;
+    *output_length = decrypt_size;
+#else
     uint8_t* output_buffer = (uint8_t*)malloc(decrypt_size);
     
     // 直接复制源数据
@@ -163,6 +190,6 @@ int crypto_aes_remote_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t *
     // 设置输出参数
     *output = output_buffer;
     *output_length = decrypt_size;
-
+#endif
     return result;
 }

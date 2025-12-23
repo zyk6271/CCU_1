@@ -14,14 +14,13 @@
 static const char *TAG = "tcp_client";
 
 #define HOST_BUFSZ	 1024
-// #define HOST_IP     "smartdevice-uat.towngas-uat.com"
-//#define HOST_IP     "smartdevice-dev.towngas.com"
+#define HOST_IP     "smartdevice-uat.towngas-uat.com"
+// #define HOST_IP     "smartdevice-dev.towngas.com"
 //#define HOST_IP     "smartdevice.towngas.com"
-// #define HOST_PORT    10020
+#define HOST_PORT    10020
 
-// #define HOST_IP     "192.168.16.223"
-#define HOST_IP     "tgc-tcp-uat.capax-tech.com"
-#define HOST_PORT    9000
+// #define HOST_IP     "tgc-tcp-uat.capax-tech.com"
+// #define HOST_PORT    9000
 
 static int already_connected = 0;
 static int sock = -1;

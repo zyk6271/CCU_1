@@ -4,6 +4,8 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "heater_rinnai_api.h"
+#include "heater_interface_api.h"
+#include "ccu_modbus_api.h"
 #include "esp_log.h"
 
 static const char *TAG = "tcp_event";
@@ -31,8 +33,15 @@ void tcp_event_process(void *parameter)
 		if(event & TCP_EVENT_LINK_UP)
 		{
 			ESP_LOGI(TAG,"TCP_EVENT_LINK_UP");
-			extern void wifi_ccu_modbus_poll_upload(void);
+#if HEATER_INTERFACE_TYPE == 1
+			wifi_heater_common_key_request();//heart
+#else
+#if MODBUS_DIFFERENCE_UPLOAD == 1
+			wifi_heater_common_key_request();//heart
+#else
 			wifi_ccu_modbus_poll_upload();
+#endif
+#endif
 		}
 		else if(event & TCP_EVENT_LINK_DOWN)
 		{
@@ -46,9 +55,11 @@ void tcp_event_process(void *parameter)
 void tcp_event_init(void)
 {
 	heater_heart_timer_init();
-	// heater_poll_timer_init();
-	// heater_detect_timer_init();
-	// wifi_rinnai_priority_timer_init();
+#if HEATER_INTERFACE_TYPE == 1
+	heater_poll_timer_init();
+	heater_detect_timer_init();
+	wifi_rinnai_priority_timer_init();
+#endif
 	tcp_event = xEventGroupCreate();
 	xTaskCreatePinnedToCore(tcp_event_process, "tcp_event", 4096, NULL, 3, NULL, tskNO_AFFINITY);
 }
