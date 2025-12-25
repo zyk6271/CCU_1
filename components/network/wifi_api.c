@@ -79,6 +79,7 @@ static void heater_poll_upload_timer_callback(void* arg)
 {
     heater_interface_status_reset();
 }
+
 #if HEATER_INTERFACE_TYPE == 1
 static void heater_heart_timer_callback(void* arg)
 {
@@ -91,17 +92,18 @@ static void heater_heart_timer_callback(void* arg)
 #else
 static void heater_heart_timer_callback(void* arg)
 {
+#if HEATER_CUSTOM_SERVER == 0
+    wifi_heater_common_heart_upload();
+#else
     wifi_ccu_modbus_poll_upload();
+#endif
 }
 #endif
+
 void heater_heart_timer_start(void)
 {
     esp_timer_stop(heater_heart_timer);
-#if HEATER_INTERFACE_TYPE == 1
     esp_timer_start_periodic(heater_heart_timer, HEATER_HEART_PERIOD * 1000 * 1000);
-#else
-    esp_timer_start_periodic(heater_heart_timer, HEATER_HEART_PERIOD * 1000 * 1000);
-#endif
 }
 
 void heater_heart_timer_stop(void)
@@ -127,15 +129,14 @@ void heater_heart_timer_init(void)
 #if HEATER_INTERFACE_TYPE == 1
     ESP_ERROR_CHECK(esp_timer_create(&heater_poll_upload_timer_args, &heater_poll_upload_timer));
 #else
-    esp_timer_start_periodic(heater_heart_timer, 300 * 1000 * 1000);
+    esp_timer_start_periodic(heater_heart_timer, HEATER_HEART_PERIOD * 1000 * 1000);
 #endif
 }
-
+//all for uart
 static void heater_poll_timer_callback(void* arg)
 {
     if(heater_detect_done == 1 && smartconfig_start_flag == 0)
     {
-#if HEATER_INTERFACE_TYPE == 1
         if(hearter_device_type_get() == HEATER_TYPE_RINNAL_BUSINESS)
         {
             heater_rinnai_bussiness_poll_callback();
@@ -144,16 +145,12 @@ static void heater_poll_timer_callback(void* arg)
         {
             heater_interface_error_read();
         }
-#else
-        ccu_modbus_poll();
-#endif
     }
 }
 
 void heater_poll_timer_start(void)
 {
     esp_timer_stop(heater_poll_timer);
-#if HEATER_INTERFACE_TYPE == 1
     if(hearter_device_type_get() == HEATER_TYPE_RINNAL_BUSINESS)
     {
         esp_timer_start_periodic(heater_poll_timer, 1500 * 1000);
@@ -162,10 +159,6 @@ void heater_poll_timer_start(void)
     {
         esp_timer_start_periodic(heater_poll_timer, 5 * 1000 * 1000);
     }
-#else
-        esp_timer_start_periodic(heater_poll_timer, 2000 * 1000);
-#endif
-
 }
 
 void heater_poll_timer_init(void)
@@ -198,7 +191,6 @@ void heater_detect_finish(uint8_t value)
 
 static void heater_detect_timer_callback(void* arg)
 {
-#if HEATER_INTERFACE_TYPE == 1
     static uint8_t heater_detect_try = 0;
     switch(heater_detect_try)
     {
@@ -217,17 +209,6 @@ static void heater_detect_timer_callback(void* arg)
         default:
             break;
     }
-#else
-    // if(modbus_detect_result_read() == 1)
-    // {
-    //     if(heater_detect_done == 0 && smartconfig_start_flag == 0)
-    //     {
-    //         heater_detect_done = 1;
-    //         esp_timer_stop(heater_detect_timer);
-    //         heater_heart_timer_start();
-    //     }
-    // }
-#endif
 }
 
 void heater_detect_timer_init(void)

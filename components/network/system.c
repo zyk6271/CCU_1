@@ -83,7 +83,7 @@ void wifi_uart_write_frame(unsigned char control_type,unsigned long plain_len,un
     wifi_uart_tx_buf[data_len] = check_sum;
     wifi_uart_tx_buf[data_len + 1] = FRAME_END;
 
-    ESP_LOG_BUFFER_HEXDUMP("tcp_client_sent", wifi_uart_tx_buf, data_len + 2, ESP_LOG_INFO);
+    //ESP_LOG_BUFFER_HEXDUMP("tcp_client_sent", wifi_uart_tx_buf, data_len + 2, ESP_LOG_INFO);
 
     wifi_uart_write_data((unsigned char *)wifi_uart_tx_buf, data_len + 2);
 }

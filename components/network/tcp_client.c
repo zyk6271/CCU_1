@@ -10,17 +10,21 @@
 #include "iot_event.h"
 #include "wifi_service.h"
 #include "tcp_client.h"
+#include "esp_netif_sntp.h"
+#include "esp_sntp.h"
 
 static const char *TAG = "tcp_client";
 
 #define HOST_BUFSZ	 1024
-#define HOST_IP     "smartdevice-uat.towngas-uat.com"
-// #define HOST_IP     "smartdevice-dev.towngas.com"
-//#define HOST_IP     "smartdevice.towngas.com"
+#if HEATER_CUSTOM_SERVER == 0
 #define HOST_PORT    10020
-
-// #define HOST_IP     "tgc-tcp-uat.capax-tech.com"
-// #define HOST_PORT    9000
+#define HOST_IP     "smartdevice-uat.towngas-uat.com"
+//#define HOST_IP     "smartdevice-dev.towngas.com"
+//#define HOST_IP     "smartdevice.towngas.com"
+#else
+#define HOST_PORT    9000
+#define HOST_IP     "tgc-tcp-uat.capax-tech.com"
+#endif
 
 static int already_connected = 0;
 static int sock = -1;
@@ -116,7 +120,7 @@ __CONNECT:
 			}
 			else
 			{
-				ESP_LOG_BUFFER_HEXDUMP("tcp_client_recv", recv_data, bytes_received, ESP_LOG_INFO);
+				//ESP_LOG_BUFFER_HEXDUMP("tcp_client_recv", recv_data, bytes_received, ESP_LOG_INFO);
 			    wifi_recv_buffer(recv_data,bytes_received);
 				bytes_received = 0;
 				continue;
@@ -166,8 +170,31 @@ uint8_t tcp_client_send(uint8_t *send_buf,size_t len)
 	return 0;
 }
 
+void time_sync_notification_cb(struct timeval *tv)
+{
+	time_t now;
+	char strftime_buf[64];
+	struct tm timeinfo;
+
+	time(&now);
+	localtime_r(&now, &timeinfo);
+	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+	ESP_LOGI(TAG, "The current date/time in Shanghai is: %s", strftime_buf);
+}
+
+void tcp_sntp_init(void)
+{
+	esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("stdtime.gov.hk");
+	config.wait_for_sync = false;
+	config.sync_cb = time_sync_notification_cb;
+	esp_netif_sntp_init(&config);
+	setenv("TZ", "CST-8", 1);
+	tzset();
+}
+
 void tcp_client_init(void)
 {
+	// tcp_sntp_init();
     tcp_event_init();
     xTaskCreatePinnedToCore(tcp_client_entry, "tcp_client", 4096, NULL, 3, NULL, tskNO_AFFINITY);
 }

@@ -1,10 +1,11 @@
 #include "stdint.h"
 
-// #define HEATER_INTERFACE_TYPE   1   //UART
-#define HEATER_INTERFACE_TYPE   2   //MODBUS
+// #define HEATER_INTERFACE_TYPE    1   //UART
+#define HEATER_INTERFACE_TYPE       2   //MODBUS
 
-#define HEATER_HEART_ENABLED    1
-#define HEATER_HEART_PERIOD    30 //30 is normal,300 is modbus without difference
+#define HEATER_HEART_ENABLED        1
+#define HEATER_HEART_PERIOD         30 //30 is normal,300 is modbus without difference
+#define HEATER_CUSTOM_SERVER        0
 
 enum heater_type
 {

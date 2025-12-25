@@ -17,11 +17,14 @@
 #include "network_typedef.h"
 #include "wifi_api.h"
 #include "wifi_manager.h"
+#include "esp_sntp.h"
 #include "heater_interface_api.h"
 
 static const char *TAG = "ccu_modbus";
 
 static void *ccu_modbus_handle = NULL;
+
+static time_t last_ntp_sync_time = 0; 
 
 #define MB_TXD_PIN (GPIO_NUM_21)
 #define MB_RXD_PIN (GPIO_NUM_20)
@@ -48,12 +51,14 @@ enum {
 // Enumeration of all supported CIDs for device (used in parameter definition table)
 enum {
     CID_GAS_FLOW_SENSOR = 0,
+    CID_GAS_FLOW_SENSOR_TIME,
     CID_FRIDGE,
     CID_CURRENTWATCH,
     CID_DRYCONTACT,
     CID_DISHWASHER,
     CID_GAS_CONCENTRATION_SENSOR,
     CID_ULTRA_SONIC_GAS_METER,
+    CID_ULTRA_SONIC_GAS_METER_TIME,
     CID_GAS_STEAMER,
     CID_GAS_WOK,
     CID_COUNT
@@ -90,6 +95,20 @@ const mb_parameter_descriptor_t device_parameters[] = {
         26,                      // 24字节
         OPTS(0, 0, 0),           // 无范围限制
         PAR_PERMS_READ           // 只读
+    },
+    {
+        CID_GAS_FLOW_SENSOR_TIME,
+        "CID_GAS_FLOW_SENSOR_TIME",        // 名称
+        "--",                    // 无单位
+        GAS_FLOW_SENSOR_MB_ADDR,  // 从机地址（需与设备一致）
+        MB_PARAM_HOLDING,        // 输入寄存器（只读）
+        0x0016,                  // 寄存器起始地址
+        4,                       // 占用12个寄存器（8位）
+        0,                       // 数据偏移量（需根据实际结构体调整）
+        PARAM_TYPE_U16_BA,       // 16位无符号整数
+        8,                       // 24字节
+        OPTS(0, 0, 0),           // 无范围限制
+        PAR_PERMS_READ_WRITE     // 只读
     },
     {
         CID_FRIDGE,
@@ -176,6 +195,20 @@ const mb_parameter_descriptor_t device_parameters[] = {
         PAR_PERMS_READ                          // 只读
     },
     {
+        CID_ULTRA_SONIC_GAS_METER_TIME,
+        "CID_ULTRA_SONIC_GAS_METER_TIME",                // 名称
+        "--",                                   // 无单位
+        ULTRA_SONIC_GAS_METER_MB_ADDR,          // 从机地址（需与设备一致）
+        MB_PARAM_HOLDING,                       // 输入寄存器（只读）
+        0x0009,                                 // 寄存器起始地址
+        3,                                      // 占用4个寄存器（16位）
+        0,                                      // 数据偏移量（需根据实际结构体调整）
+        PARAM_TYPE_U16_BA,                      // 16位无符号整数
+        6,                                     // 14字节
+        OPTS(0, 0, 0),                          // 无范围限制
+        PAR_PERMS_READ_WRITE                          // 只读
+    },
+    {
         CID_GAS_STEAMER,
         "GAS_STEAMER",                           // 名称
         "--",                                   // 无单位
@@ -215,17 +248,35 @@ uint8_t modbus_detect_result_read(void)
 void dish_washer_info_upload(void)
 {
     uint8_t plain_buf[41] = {0};
+    uint8_t temp_buf[41] = {0};
     uint8_t *encrypt_ptr;
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
     // 按寄存器地址分段拷贝（单位：字节）
-    plain_buf[0] = tcp_send_count_read();;
-    memcpy(&plain_buf[1],  modbus_dishwasher_value + (0x1321 - 0x1320) * 2, 2);  // 0x1321（2字节）
-    memcpy(&plain_buf[3],  modbus_dishwasher_value + (0x1324 - 0x1320) * 2, 8);  // 0x1324~0x1327（4寄存器 × 2 = 8字节）
-    memcpy(&plain_buf[11], modbus_dishwasher_value + (0x132C - 0x1320) * 2, 22); // 0x132C~0x1336（11寄存器 × 2 = 22字节）
-    memcpy(&plain_buf[33], modbus_dishwasher_value + (0x133B - 0x1320) * 2, 6);  // 0x133B~0x133D（3寄存器 × 2 = 6字节）
-    memcpy(&plain_buf[39], modbus_dishwasher_value + (0x1349 - 0x1320) * 2, 2);  // 0x1349（2字节）
+    memcpy(&temp_buf[0],  modbus_dishwasher_value + (0x1321 - 0x1320) * 2, 2);  // 0x1321（2字节）
+    memcpy(&temp_buf[2],  modbus_dishwasher_value + (0x1324 - 0x1320) * 2, 8);  // 0x1324~0x1327（4寄存器 × 2 = 8字节）
+    memcpy(&temp_buf[10], modbus_dishwasher_value + (0x132C - 0x1320) * 2, 22); // 0x132C~0x1336（11寄存器 × 2 = 22字节）
+    memcpy(&temp_buf[32], modbus_dishwasher_value + (0x133B - 0x1320) * 2, 6);  // 0x133B~0x133D（3寄存器 × 2 = 6字节）
+    memcpy(&temp_buf[38], modbus_dishwasher_value + (0x1349 - 0x1320) * 2, 2);  // 0x1349（2字节）
+
+    plain_buf[0] = tcp_send_count_read();
+    plain_buf[2] = temp_buf[2];
+    plain_buf[3] = temp_buf[3];
+    plain_buf[4] = temp_buf[4];
+    plain_buf[5] = temp_buf[5];
+    plain_buf[6] = temp_buf[10];
+    plain_buf[7] = temp_buf[11];
+    plain_buf[10] = temp_buf[0];
+    plain_buf[11] = temp_buf[1];
+    plain_buf[13] = temp_buf[32];
+    plain_buf[14] = temp_buf[33];
+    plain_buf[16] = temp_buf[28];
+    plain_buf[17] = temp_buf[29];
+    plain_buf[30] = temp_buf[22];
+    plain_buf[31] = temp_buf[23];
+    plain_buf[33] = temp_buf[30];
+    plain_buf[34] = temp_buf[31];
 
     ESP_LOG_BUFFER_HEXDUMP("dish_washer_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -247,7 +298,20 @@ void currentwatch_info_upload(void)
 
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_currentwatch_value, 12);  // 0x1321（2字节）
+    plain_buf[2] = modbus_currentwatch_value[0];
+    plain_buf[3] = modbus_currentwatch_value[1];
+    plain_buf[4] = modbus_currentwatch_value[2];
+    plain_buf[5] = modbus_currentwatch_value[3];
+
+    plain_buf[13] = modbus_currentwatch_value[4];
+    plain_buf[14] = modbus_currentwatch_value[5];
+    plain_buf[16] = modbus_currentwatch_value[6];
+    plain_buf[17] = modbus_currentwatch_value[7];
+
+    plain_buf[30] = modbus_currentwatch_value[8];
+    plain_buf[31] = modbus_currentwatch_value[9];
+    plain_buf[33] = modbus_currentwatch_value[10];
+    plain_buf[34] = modbus_currentwatch_value[11];
 
     ESP_LOG_BUFFER_HEXDUMP("currentwatch_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -267,9 +331,36 @@ void fridge_info_upload(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
+    float temp = (modbus_fridge_value[0] << 8) | modbus_fridge_value[1];
+
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_fridge_value, 40);  // 0x1321（2字节）
+    plain_buf[2] = modbus_fridge_value[0];
+    plain_buf[3] = modbus_fridge_value[1];
+    plain_buf[35] = modbus_fridge_value[27];
+    plain_buf[40] = modbus_fridge_value[25];
+
+    if(modbus_fridge_value[35])
+    {
+        plain_buf[1] = 0x08;
+    }
+    if(modbus_fridge_value[11])
+    {
+        plain_buf[1] = 0x07;
+    }
+    if(modbus_fridge_value[9])
+    {
+        plain_buf[1] = 0x06;
+    }
+    if(modbus_fridge_value[5])
+    {
+        plain_buf[1] = 0x05;
+    }
+
+    if(temp < 0)
+    {
+        plain_buf[36] = 1;
+    }
 
     ESP_LOG_BUFFER_HEXDUMP("fridge_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -322,7 +413,9 @@ void drycontact_sensor_info_upload(void)
 
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_drycontact_value, 1); 
+    plain_buf[35] = (modbus_drycontact_value[0] & 0x02) > 0 ? 1 : 0;
+    plain_buf[38] = (modbus_drycontact_value[0] & 0x04) > 0 ? 1 : 0;
+    plain_buf[40] = (modbus_drycontact_value[0] & 0x01) > 0 ? 1 : 0;
 
     ESP_LOG_BUFFER_HEXDUMP("drycontact_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -342,10 +435,25 @@ void gas_concentration_sensor_info_upload(void)
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
+    float temp = (modbus_gas_concentration_sensor_value[16] << 8) | modbus_gas_concentration_sensor_value[17];
+    float humi = (modbus_gas_concentration_sensor_value[78] << 8) | modbus_gas_concentration_sensor_value[19];
+
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
-    memcpy(&plain_buf[1],  modbus_gas_concentration_sensor_value + (0x0016 - 0x0016) * 2, 2);  // 0x1321（2字节）
-    memcpy(&plain_buf[3],  modbus_gas_concentration_sensor_value + (0x001E - 0x0016) * 2, 4);  // 0x1324~0x1327（4寄存器 × 2 = 8字节）
+    plain_buf[2] = modbus_gas_concentration_sensor_value[0];
+    plain_buf[3] = modbus_gas_concentration_sensor_value[1];
+    plain_buf[4] = modbus_gas_concentration_sensor_value[16];
+    plain_buf[5] = modbus_gas_concentration_sensor_value[17];
+    plain_buf[6] = modbus_gas_concentration_sensor_value[18];
+    plain_buf[7] = modbus_gas_concentration_sensor_value[19];
+    if(humi < 0)
+    {
+        plain_buf[36] = 1;
+    }
+    if(temp < 0)
+    {
+        plain_buf[40] = 1;
+    }
 
     ESP_LOG_BUFFER_HEXDUMP("gas_concentration_sensor_info_upload", plain_buf, 41, ESP_LOG_INFO);
 
@@ -437,6 +545,71 @@ void ccu_poll_status_reset(void)
     memset(modbus_gas_wok_value,0,sizeof(modbus_gas_wok_value));
 }
 
+int decimal_to_bcd_convert(int dec)
+{
+    return (dec + (dec/10) * 6);
+}
+
+void ccu_modbus_ntp_sync_gas_flow_sensor(void)
+{
+    uint8_t type = 0;  
+    esp_err_t err = ESP_OK;
+	time_t now;
+	struct tm timeinfo;
+    uint8_t time_data[8] = {0};
+
+	time(&now);
+	localtime_r(&now, &timeinfo);
+
+    time_data[1] = timeinfo.tm_year + 1900 - 2000;
+    time_data[2] = timeinfo.tm_mon + 1;
+    time_data[3] = timeinfo.tm_mday;
+    if(timeinfo.tm_wday == 0)
+    {
+        time_data[4] = 0x07;
+    }
+    else
+    {
+        time_data[4] = timeinfo.tm_wday;
+    }
+    time_data[5] = timeinfo.tm_hour;
+    time_data[6] = timeinfo.tm_min;
+    time_data[7] = timeinfo.tm_sec;
+
+    const mb_parameter_descriptor_t* param_descriptor = NULL;
+    err = mbc_master_get_cid_info(ccu_modbus_handle, CID_GAS_FLOW_SENSOR_TIME, &param_descriptor);
+    if ((err != ESP_ERR_NOT_FOUND) && (param_descriptor != NULL)) 
+    {
+        mbc_master_set_parameter(ccu_modbus_handle, param_descriptor->cid,time_data,&type);
+    }
+}
+
+void ccu_modbus_ntp_sync_ultrasonic_gas_meter(void)
+{
+    uint8_t type = 0;  
+    esp_err_t err = ESP_OK;
+	time_t now;
+	struct tm timeinfo;
+    uint8_t time_data[6] = {0};
+
+	time(&now);
+	localtime_r(&now, &timeinfo);
+
+    time_data[0] = decimal_to_bcd_convert(timeinfo.tm_year + 1900 - 2000);
+    time_data[1] = decimal_to_bcd_convert(timeinfo.tm_mon + 1);
+    time_data[2] = decimal_to_bcd_convert(timeinfo.tm_mday);
+    time_data[3] = decimal_to_bcd_convert(timeinfo.tm_hour);
+    time_data[4] = decimal_to_bcd_convert(timeinfo.tm_min);
+    time_data[5] = decimal_to_bcd_convert(timeinfo.tm_sec);
+
+    const mb_parameter_descriptor_t* param_descriptor = NULL;
+    err = mbc_master_get_cid_info(ccu_modbus_handle, CID_ULTRA_SONIC_GAS_METER_TIME, &param_descriptor);
+    if ((err != ESP_ERR_NOT_FOUND) && (param_descriptor != NULL)) 
+    {
+        mbc_master_set_parameter(ccu_modbus_handle, param_descriptor->cid, time_data, &type);
+    }
+}
+
 void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,uint8_t device_valid_id, void (*mb_callback)(void))
 {
     uint8_t type = 0;  
@@ -460,13 +633,36 @@ void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,uint8_t devic
                 memcpy(value_temp,modbus_read_temp,param_descriptor->param_size);
                 ESP_LOGI(TAG, "%s modbus value has change\r\n",param_descriptor->param_key);
                 //ESP_LOG_BUFFER_HEXDUMP("modbus_recv_buf", modbus_read_temp, param_descriptor->param_size, ESP_LOG_INFO);
-#if MODBUS_DIFFERENCE_UPLOAD == 1
+#if HEATER_CUSTOM_SERVER == 0
                 mb_callback();
 #endif
             }
         } 
     }
     vTaskDelay(pdMS_TO_TICKS(300)); 
+}
+
+void ccu_modbus_ntp_sync(void)
+{
+    time_t now;
+    struct tm timeinfo;
+    time(&now); // 获取当前系统时间
+    localtime_r(&now, &timeinfo);
+    
+    if (timeinfo.tm_year > (2020 - 1900)) 
+    {
+        // 如果 last_ntp_sync_time 为0，说明是刚上电且NTP刚同步好，立即执行一次
+        // 或者 当前时间 - 上次同步时间 >= 24小时
+        if (last_ntp_sync_time == 0 || (now - last_ntp_sync_time) >= 24 * 60 * 60)
+        {
+            ccu_modbus_ntp_sync_gas_flow_sensor();
+            vTaskDelay(pdMS_TO_TICKS(300)); 
+            ccu_modbus_ntp_sync_ultrasonic_gas_meter();
+            vTaskDelay(pdMS_TO_TICKS(300)); 
+            // 更新上次同步时间
+            time(&last_ntp_sync_time);
+        }
+    }
 }
 
 void ccu_modbus_poll(void)
@@ -476,6 +672,7 @@ void ccu_modbus_poll(void)
         return;
     }
 
+    //ccu_modbus_ntp_sync();
     ccu_modbus_poll_select(CID_GAS_FLOW_SENSOR,modbus_gas_flow_sensor_value,0,gas_flow_sensor_info_upload);
     ccu_modbus_poll_select(CID_FRIDGE,modbus_fridge_value,1,fridge_info_upload);
     ccu_modbus_poll_select(CID_CURRENTWATCH,modbus_currentwatch_value,2,currentwatch_info_upload);
@@ -528,7 +725,7 @@ void wifi_ccu_modbus_poll_upload(void)
     }
 }
 
-void hmodbus_poll_thread_callback(void *parameter)
+void modbus_poll_thread_callback(void *parameter)
 {
     while(1)
     {
@@ -585,5 +782,5 @@ void ccu_modbus_init(void)
         ESP_LOGE(TAG,"mbc_master_start fail, returns(0x%x).", (int)err);
     }
 
-    xTaskCreate(hmodbus_poll_thread_callback, "modbus_poll_thread_handle", 8192, NULL, 5, NULL);
+    xTaskCreate(modbus_poll_thread_callback, "modbus_poll_thread_handle", 8192, NULL, 5, NULL);
 }

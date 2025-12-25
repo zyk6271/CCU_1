@@ -33,10 +33,12 @@ void tcp_event_process(void *parameter)
 		if(event & TCP_EVENT_LINK_UP)
 		{
 			ESP_LOGI(TAG,"TCP_EVENT_LINK_UP");
+
+
 #if HEATER_INTERFACE_TYPE == 1
 			wifi_heater_common_key_request();//heart
 #else
-#if MODBUS_DIFFERENCE_UPLOAD == 1
+#if HEATER_CUSTOM_SERVER == 0
 			wifi_heater_common_key_request();//heart
 #else
 			wifi_ccu_modbus_poll_upload();
