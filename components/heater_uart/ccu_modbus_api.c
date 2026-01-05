@@ -615,6 +615,10 @@ void ccu_modbus_poll_select(uint8_t modbus_cid,uint8_t* value_temp,uint8_t devic
     uint8_t type = 0;  
     esp_err_t err = ESP_OK;
     const mb_parameter_descriptor_t* param_descriptor = NULL;
+    if(smartconfig_start_flag != 0)
+    {
+        return;
+    }
     err = mbc_master_get_cid_info(ccu_modbus_handle, modbus_cid, &param_descriptor);
     if ((err != ESP_ERR_NOT_FOUND) && (param_descriptor != NULL)) 
     {
@@ -667,11 +671,6 @@ void ccu_modbus_ntp_sync(void)
 
 void ccu_modbus_poll(void)
 {
-    if(smartconfig_start_flag != 0)
-    {
-        return;
-    }
-
     ccu_modbus_ntp_sync();
     ccu_modbus_poll_select(CID_GAS_FLOW_SENSOR,modbus_gas_flow_sensor_value,0,gas_flow_sensor_info_upload);
     ccu_modbus_poll_select(CID_FRIDGE,modbus_fridge_value,1,fridge_info_upload);
