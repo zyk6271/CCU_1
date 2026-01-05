@@ -194,7 +194,7 @@ void tcp_sntp_init(void)
 
 void tcp_client_init(void)
 {
-	// tcp_sntp_init();
+	tcp_sntp_init();
     tcp_event_init();
     xTaskCreatePinnedToCore(tcp_client_entry, "tcp_client", 4096, NULL, 3, NULL, tskNO_AFFINITY);
 }

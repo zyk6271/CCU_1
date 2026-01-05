@@ -672,7 +672,7 @@ void ccu_modbus_poll(void)
         return;
     }
 
-    //ccu_modbus_ntp_sync();
+    ccu_modbus_ntp_sync();
     ccu_modbus_poll_select(CID_GAS_FLOW_SENSOR,modbus_gas_flow_sensor_value,0,gas_flow_sensor_info_upload);
     ccu_modbus_poll_select(CID_FRIDGE,modbus_fridge_value,1,fridge_info_upload);
     ccu_modbus_poll_select(CID_CURRENTWATCH,modbus_currentwatch_value,2,currentwatch_info_upload);
