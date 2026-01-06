@@ -1,15 +1,7 @@
+#ifndef KEY_H
+#define KEY_H
+
 void key_init(void);
-uint64_t key_refresh_sem_get(void);
-uint64_t key0_click_sem_get(void);
-uint64_t key1_click_sem_get(void);
-uint64_t key2_click_sem_get(void);
-uint64_t key0_long_sem_get(void);
-uint64_t key1_long_sem_get(void);
-uint64_t key2_long_sem_get(void);
-uint64_t key0_long_click_sem_get(void);
-uint64_t key1_long_click_sem_get(void);
-uint64_t key2_long_click_sem_get(void);
-uint64_t key0_1_long_click_sem_get(void);
-uint64_t key0_2_long_click_sem_get(void);
-uint64_t key1_2_long_click_sem_get(void);
-void key_sem_clear(void);
+uint8_t reset_key_level_get_level(void);
+
+#endif

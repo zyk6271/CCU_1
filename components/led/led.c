@@ -43,6 +43,11 @@ void led_network_status_handle(uint8_t type)
         led_set_mode(led_network_status, LOOP_PERMANENT,"200,0,");
         led_start(led_network_status);
         break;
+    case 4://一长一短，等待OTA
+        led_stop(led_network_status);
+        led_set_mode(led_network_status, LOOP_PERMANENT,"1000,1000,200,200");
+        led_start(led_network_status);
+        break;    
     default:
         break;
     }

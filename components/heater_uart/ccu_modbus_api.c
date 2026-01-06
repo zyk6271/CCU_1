@@ -436,7 +436,7 @@ void gas_concentration_sensor_info_upload(void)
     uint32_t encrypt_size = 0;
 
     float temp = (modbus_gas_concentration_sensor_value[16] << 8) | modbus_gas_concentration_sensor_value[17];
-    float humi = (modbus_gas_concentration_sensor_value[78] << 8) | modbus_gas_concentration_sensor_value[19];
+    float humi = (modbus_gas_concentration_sensor_value[18] << 8) | modbus_gas_concentration_sensor_value[19];
 
     // 按寄存器地址分段拷贝（单位：字节）
     plain_buf[0] = tcp_send_count_read();
