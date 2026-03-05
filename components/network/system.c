@@ -88,16 +88,15 @@ void wifi_uart_write_frame(unsigned char control_type,unsigned long plain_len,un
 void wifi_data_handle(unsigned short offset,uint32_t length)
 {
     uint32_t decrypt_size;
-    uint8_t *remote_decrypt_buffer;
-    crypto_aes_remote_decrypt(&wifi_data_process_buf[offset + DATA_START],length,&remote_decrypt_buffer,&decrypt_size);
+    uint8_t remote_decrypt_buffer[128] = {0};
+    crypto_aes_remote_decrypt(&wifi_data_process_buf[offset + DATA_START],length,remote_decrypt_buffer,&decrypt_size);
     ESP_LOGI(TAG,"data_handle is %02X",wifi_data_process_buf[offset + CONTROL_TYPE]);
     switch(wifi_data_process_buf[offset + CONTROL_TYPE])
     {
     case 0x96:
-        uint8_t *local_decrypt_buffer;
-        crypto_aes_local_decrypt(&wifi_data_process_buf[offset + DATA_START],length,&local_decrypt_buffer,&decrypt_size);
+        uint8_t local_decrypt_buffer[128] = {0};
+        crypto_aes_local_decrypt(&wifi_data_process_buf[offset + DATA_START],length,local_decrypt_buffer,&decrypt_size);
         crypto_remote_parse(local_decrypt_buffer);
-        free(local_decrypt_buffer);
         heater_interface_status_reset();
         break;
     case 0x30:
@@ -124,8 +123,6 @@ void wifi_data_handle(unsigned short offset,uint32_t length)
     default:
         break;
     }
-
-    free(remote_decrypt_buffer);
 }
 
 unsigned char wifi_get_queue_total_data(void)

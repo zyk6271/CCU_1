@@ -232,10 +232,13 @@ void heater_uart_service(void)
 
         if(heater_data_process_buf[offset + HEATER_UART_CMD_0] == HEATER_UART_FRAME_RINNAI_BUSSINESS_CMD_0)
         {
-
-            rx_value_len = heater_rinnai_bussiness_data_length_find((heater_data_process_buf[offset + HEATER_UART_CMD_2] * 0x100000000) |
-                            heater_data_process_buf[offset + HEATER_UART_CMD_3] << 24 | heater_data_process_buf[offset + HEATER_UART_CMD_4] << 16 | 
-                            heater_data_process_buf[offset + HEATER_UART_CMD_5] << 8 | heater_data_process_buf[offset + HEATER_UART_CMD_6]);
+            rx_value_len = heater_rinnai_bussiness_data_length_find(
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_2] << 32) |
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_3] << 24) | 
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_4] << 16) | 
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_5] <<  8) | 
+                                (uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_6]
+                            );
 
             if(heater_data_process_buf[offset + rx_value_len + 8] != HEATER_UART_FRAME_END_EXT) {
                 offset ++;

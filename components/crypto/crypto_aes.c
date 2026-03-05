@@ -10,7 +10,6 @@
 #include "freertos/FreeRTOS.h"
 #include "aes/esp_aes.h"
 #include "esp_log.h"
-
 #include "string.h"
 #include "crypto_aes.h"
 #include "storage.h"
@@ -30,6 +29,8 @@ static uint8_t Local_AES_IV[16] =
 static uint8_t Remote_AES_Key[32] = {0};
 static uint8_t Remote_AES_IV[16] = {0};
 
+#define MAX_CRYPTO_BUFFER_SIZE 128
+
 void crypto_initialize(void)
 {
     uint8_t local_key[32];
@@ -45,104 +46,84 @@ void crypto_remote_parse(const unsigned char value[])
 {
     memcpy(Remote_AES_Key, &value[1], 32);
     memcpy(Remote_AES_IV, &value[33], 16);
-    ESP_LOGI(TAG,"crypto_remote_parse");
 }
 
-int crypto_aes_local_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** output, uint32_t *output_length)
+int crypto_aes_local_encrypt(const uint8_t* plain_buffer, int plain_size, uint8_t* output, uint32_t *output_length)
 {
-    int result = 0;
+    // 防止溢出
+    if (plain_size > MAX_CRYPTO_BUFFER_SIZE - 16 || plain_size < 0) {
+        return -1; 
+    }
 
     int remainder = plain_size % 16;
     int paddedSize = plain_size + (16 - remainder);
 
-    uint8_t* encrypted = (uint8_t*) malloc((paddedSize) * sizeof(uint8_t));
-
     uint8_t iv[16] = {0};
-    memcpy(iv,Local_AES_IV,16);
+    memcpy(iv, Local_AES_IV, 16);
 
-    uint8_t dataBuffer[paddedSize];
+    uint8_t dataBuffer[MAX_CRYPTO_BUFFER_SIZE] = {0}; 
     memcpy(dataBuffer, plain_buffer, plain_size);
 
     esp_aes_setkey(&aes_handle, Local_AES_Key, 256);
 
-    if (remainder > 0) {
-        // 填充剩余部分
-        for (int i = plain_size; i < paddedSize; i++)
-        {
-            dataBuffer[i] = 0;
-        }
-    }
-
-    result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_ENCRYPT, paddedSize, iv, dataBuffer, encrypted);
-    *output = encrypted;
+    int result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_ENCRYPT, paddedSize, iv, dataBuffer, output);
     *output_length = paddedSize;
 
     return result;
 }
 
-int crypto_aes_local_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **output,uint32_t *output_length)
+int crypto_aes_local_decrypt(const uint8_t *decrypt_buffer, int decrypt_size, uint8_t *output, uint32_t *output_length)
 {
-    int result = 0;
+    if (decrypt_size > MAX_CRYPTO_BUFFER_SIZE || decrypt_size <= 0 || (decrypt_size % 16 != 0)) {
+        return -1;
+    }
 
     uint8_t iv[16] = {0};
-    memcpy(iv,Local_AES_IV,16);
+    memcpy(iv, Local_AES_IV, 16);
 
-    uint8_t* decrypted = (uint8_t*) malloc((decrypt_size) * sizeof(uint8_t));
+    esp_aes_setkey(&aes_handle, Local_AES_Key, 256);
 
-    esp_aes_setkey(&aes_handle, Local_AES_Key, sizeof(Local_AES_Key));
-
-    result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_DECRYPT, decrypt_size, iv, decrypt_buffer, decrypted);
-    *output = decrypted;
+    int result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_DECRYPT, decrypt_size, iv, decrypt_buffer, output);
     *output_length = decrypt_size;
 
     return result;
 }
 
-int crypto_aes_remote_encrypt(uint8_t* plain_buffer, int plain_size, uint8_t** output, uint32_t *output_length)
+int crypto_aes_remote_encrypt(const uint8_t* plain_buffer, int plain_size, uint8_t* output, uint32_t *output_length)
 {
-    int result = 0;
+    if (plain_size > MAX_CRYPTO_BUFFER_SIZE - 16 || plain_size < 0) {
+        return -1; 
+    }
 
     int remainder = plain_size % 16;
     int paddedSize = plain_size + (16 - remainder);
 
-    uint8_t* encrypted = (uint8_t*) malloc((paddedSize) * sizeof(uint8_t));
-
     uint8_t iv[16] = {0};
-    memcpy(iv,Remote_AES_IV,16);
+    memcpy(iv, Remote_AES_IV, 16);
 
-    uint8_t dataBuffer[paddedSize];
+    uint8_t dataBuffer[MAX_CRYPTO_BUFFER_SIZE] = {0}; 
     memcpy(dataBuffer, plain_buffer, plain_size);
 
     esp_aes_setkey(&aes_handle, Remote_AES_Key, 256);
 
-    if (remainder > 0) {
-        // 填充剩余部分
-        for (int i = plain_size; i < paddedSize; i++)
-        {
-            dataBuffer[i] = 0;
-        }
-    }
-
-    result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_ENCRYPT, paddedSize, iv, dataBuffer, encrypted);
-    *output = encrypted;
+    int result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_ENCRYPT, paddedSize, iv, dataBuffer, output);
     *output_length = paddedSize;
 
     return result;
 }
 
-int crypto_aes_remote_decrypt(uint8_t *decrypt_buffer,int decrypt_size,uint8_t **output,uint32_t *output_length)
+int crypto_aes_remote_decrypt(const uint8_t *decrypt_buffer, int decrypt_size, uint8_t *output, uint32_t *output_length)
 {
-    int result = 0;
+    if (decrypt_size > MAX_CRYPTO_BUFFER_SIZE || decrypt_size <= 0 || (decrypt_size % 16 != 0)) {
+        return -1;
+    }
 
     uint8_t iv[16] = {0};
-    memcpy(iv,Remote_AES_IV,16);
+    memcpy(iv, Remote_AES_IV, 16);
 
-    uint8_t* decrypted = (uint8_t*) malloc((decrypt_size) * sizeof(uint8_t));
+    esp_aes_setkey(&aes_handle, Remote_AES_Key, 256);
 
-    esp_aes_setkey(&aes_handle, Remote_AES_Key, sizeof(Local_AES_Key));
-
-    result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_DECRYPT, decrypt_size, iv, decrypt_buffer, decrypted);
-    *output = decrypted;
+    int result = esp_aes_crypt_cbc(&aes_handle, ESP_AES_DECRYPT, decrypt_size, iv, decrypt_buffer, output);
     *output_length = decrypt_size;
 
     return result;

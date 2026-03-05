@@ -281,8 +281,8 @@ void heater_rinnai_bussiness_onoff_setting_read(void)
 
 void wifi_rinnai_bussiness_command_model_upload(void)
 {
-    uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t plain_buf[8] = {0};
+    uint8_t encrypt_buf[16] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
@@ -290,19 +290,17 @@ void wifi_rinnai_bussiness_command_model_upload(void)
     plain_buf[1] = heater_rinnai_bussiness_info.type;
     plain_buf[2] = heater_rinnai_bussiness_info.model;
 
-    crypto_aes_remote_encrypt(plain_buf,3, &encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf, 3, encrypt_buf, &encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xA0, 3, send_len);
-
-    free(encrypt_ptr);
 }
 
 void wifi_rinnai_bussiness_command_info_upload(void)
 {
     uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t encrypt_buf[64] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
@@ -397,13 +395,11 @@ void wifi_rinnai_bussiness_command_info_upload(void)
 
     ESP_LOG_BUFFER_HEXDUMP("wifi-tx-plain_buf", plain_buf, 41, ESP_LOG_INFO);
 
-    crypto_aes_remote_encrypt(plain_buf,41,&encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf, 41, encrypt_buf, &encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xB0, 41, send_len);
-
-    free(encrypt_ptr);
 }
 
 void heater_rinnai_bussiness_data_handle(uint8_t offset)

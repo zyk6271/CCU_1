@@ -38,7 +38,7 @@ static void heater_uart_rx_task(void *arg)
     }
 }
 
-void heter_uart_init(void)
+void heater_uart_init(void)
 {
     heater_uart_interface_init();
     heater_uart_service_init();

@@ -37,7 +37,7 @@ uint8_t tcp_send_count_read(void)
 void wifi_heater_common_key_request(void)
 {
     uint8_t plain_buf[8] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t encrypt_buf[16] = {0};
 
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
@@ -45,19 +45,17 @@ void wifi_heater_common_key_request(void)
     plain_buf[0] = 0;
     plain_buf[1] = 1;
 
-    crypto_aes_local_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
+    crypto_aes_local_encrypt(plain_buf, 2, encrypt_buf, &encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xff, 2, send_len);
-
-    free(encrypt_ptr);
 }
 
 void wifi_heater_common_heart_upload(void)
 {
     uint8_t plain_buf[8] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t encrypt_buf[16] = {0};
 
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
@@ -65,13 +63,11 @@ void wifi_heater_common_heart_upload(void)
     plain_buf[0] = tcp_send_count_read();
     plain_buf[1] = 1;
 
-    crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf, 2, encrypt_buf, &encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xff, 2, send_len);
-
-    free(encrypt_ptr);
 }
 
 static void heater_poll_upload_timer_callback(void* arg)

@@ -15,7 +15,7 @@
 static const char *TAG = "main";
 
 const uint8_t fw_main_ver = 0x01;
-const uint8_t fw_sub_ver = 0x06;
+const uint8_t fw_sub_ver = 0x07;
 
 void app_main(void)
 {
@@ -26,5 +26,5 @@ void app_main(void)
     crypto_initialize();
     wifi_interface_init();
     wifi_service_init();
-    heter_uart_init();
+    heater_uart_init();
 }

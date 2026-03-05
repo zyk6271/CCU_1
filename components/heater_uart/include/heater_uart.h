@@ -36,7 +36,7 @@ extern unsigned char heater_uart_tx_buf[HEATER_UART_FRAME_MIN_SIZE + HEATER_UART
 extern unsigned char *heater_queue_in;
 extern unsigned char *heater_queue_out;
 
-void heter_uart_init(void);
+void heater_uart_init(void);
 void heater_uart_service_init(void);
 void heater_recv_buffer(uint8_t *data,uint32_t length);
 void heater_uart_transmit_output(unsigned char value);

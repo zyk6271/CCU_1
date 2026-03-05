@@ -168,8 +168,8 @@ void heater_rinnai_priority_write(uint8_t value)
 
 void wifi_rinnai_command_model_upload(void)
 {
-    uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t plain_buf[8] = {0};
+    uint8_t encrypt_buf[16] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
@@ -177,108 +177,96 @@ void wifi_rinnai_command_model_upload(void)
     plain_buf[1] = heater_rinnai_info.type;
     plain_buf[2] = heater_rinnai_info.model;
 
-    crypto_aes_remote_encrypt(plain_buf,3, &encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf,3, encrypt_buf,&encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xA0, 3, send_len);
-
-    free(encrypt_ptr);
 }
 
 void wifi_rinnai_temperature_setting_response(void)
 {
-    uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t plain_buf[8] = {0};
+    uint8_t encrypt_buf[16] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
     plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
-    crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf,2,encrypt_buf,&encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xA1, 2, send_len);
-
-    free(encrypt_ptr);
 }
 
 void wifi_rinnai_eco_setting_response(void)
 {
-    uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t plain_buf[8] = {0};
+    uint8_t encrypt_buf[16] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
     plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
-    crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf,2,encrypt_buf,&encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xA2, 2, send_len);
-
-    free(encrypt_ptr);
 }
 
 void wifi_rinnai_circulation_setting_response(void)
 {
-    uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t plain_buf[8] = {0};
+    uint8_t encrypt_buf[16] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
     plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
-    crypto_aes_remote_encrypt(plain_buf,41,&encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf,41,encrypt_buf,&encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xA3, 2, send_len);
-
-    free(encrypt_ptr);
 }
 
 void wifi_rinnai_power_setting_response(void)
 {
-    uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t plain_buf[8] = {0};
+    uint8_t encrypt_buf[16] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
     plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
-    crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf,2,encrypt_buf,&encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xA4, 2, send_len);
-
-    free(encrypt_ptr);
 }
 
 void wifi_rinnai_priority_setting_response(void)
 {
-    uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t plain_buf[8] = {0};
+    uint8_t encrypt_buf[16] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
     plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
-    crypto_aes_remote_encrypt(plain_buf,2,&encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf,2,encrypt_buf,&encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xA5, 2, send_len);
-
-    free(encrypt_ptr);
 }
 
 void wifi_rinnai_priority_timer_callback(void* arg)
@@ -306,7 +294,7 @@ void wifi_rinnai_priority_timer_refresh(void)
 void wifi_rinnai_command_info_upload(void)
 {
     uint8_t plain_buf[48] = {0};
-    uint8_t *encrypt_ptr;
+    uint8_t encrypt_buf[64] = {0};
     uint16_t send_len = 0;
     uint32_t encrypt_size = 0;
 
@@ -409,13 +397,11 @@ void wifi_rinnai_command_info_upload(void)
 
     ESP_LOG_BUFFER_HEXDUMP("wifi-tx-plain_buf", plain_buf, 41, ESP_LOG_INFO);
 
-    crypto_aes_remote_encrypt(plain_buf,41,&encrypt_ptr,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf,41,encrypt_buf,&encrypt_size);
 
-    send_len = set_wifi_uart_buffer(send_len, encrypt_ptr, encrypt_size);
+    send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 
     wifi_uart_write_frame(0xB0, 41, send_len);
-
-    free(encrypt_ptr);
 }
 
 void heater_rinnai_data_handle(uint8_t offset)
@@ -488,7 +474,7 @@ void heater_rinnai_data_handle(uint8_t offset)
             
             if((char_to_hex(info_frame.on_off_setting[0]) << 4 | char_to_hex(info_frame.on_off_setting[1])) == 0x20)
             {
-                smartconfig_reset();
+                wifi_config_process_start();
             }
             else
             {
