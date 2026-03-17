@@ -5,7 +5,7 @@ enum heater_type
     HEATER_TYPE_HOME,
     HEATER_TYPE_NORITZ_HOME,
     HEATER_TYPE_RINNAI_HOME,
-    HEATER_TYPE_RINNAL_BUSINESS,
+    HEATER_TYPE_RINNAI_BUSINESS,
 };
 
 void hearter_device_type_set(uint8_t type);

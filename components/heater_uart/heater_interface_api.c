@@ -33,7 +33,7 @@ void heater_interface_status_reset(void)
         case HEATER_TYPE_RINNAI_HOME:
             heater_rinnai_poll_status_resset();
             break;
-        case HEATER_TYPE_RINNAL_BUSINESS:
+        case HEATER_TYPE_RINNAI_BUSINESS:
             heater_rinnai_bussiness_poll_status_resset();
             break;
         default:

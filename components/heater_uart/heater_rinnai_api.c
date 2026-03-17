@@ -228,7 +228,7 @@ void wifi_rinnai_circulation_setting_response(void)
     plain_buf[0] = tcp_send_count_read();;
     plain_buf[1] = 1;
 
-    crypto_aes_remote_encrypt(plain_buf,41,encrypt_buf,&encrypt_size);
+    crypto_aes_remote_encrypt(plain_buf,2,encrypt_buf,&encrypt_size);
 
     send_len = set_wifi_uart_buffer(send_len, encrypt_buf, encrypt_size);
 

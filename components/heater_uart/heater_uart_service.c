@@ -16,7 +16,7 @@ static const char *TAG = "heater_uart";
 
 struct heater_uart_send_msg
 {
-    uint8_t *data_ptr;    /* 数据块首地址 */
+    uint8_t data_ptr[64];    /* 数据块首地址 */
     uint32_t data_size;   /* 数据块大小   */
 };
 
@@ -27,9 +27,7 @@ unsigned char heater_uart_tx_buf[HEATER_UART_FRAME_MIN_SIZE + HEATER_UART_RECV_B
 unsigned char *heater_queue_in = NULL;
 unsigned char *heater_queue_out = NULL;
 
-uint8_t heater_tx_queue_buffer[ 10 * 256 ];
 static QueueHandle_t heater_tx_queue;
-static StaticQueue_t heater_tx_queue_static;
 
 void heater_uart_receive_input(unsigned char value)
 {
@@ -218,7 +216,7 @@ void heater_uart_service(void)
         if(heater_data_process_buf[offset + HEATER_UART_CMD_0] != HEATER_UART_FRAME_NORITZ_CMD_0 && 
                 heater_data_process_buf[offset + HEATER_UART_CMD_0] != HEATER_UART_FRAME_RINNAI_CMD_0 &&
                     heater_data_process_buf[offset + HEATER_UART_CMD_0] != HEATER_UART_FRAME_RINNAI_BUSSINESS_CMD_0)
-         {
+        {
             offset ++;
             continue;
         }
@@ -234,11 +232,22 @@ void heater_uart_service(void)
         {
             rx_value_len = heater_rinnai_bussiness_data_length_find(
                                 ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_2] << 32) |
-                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_3] << 24) | 
-                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_4] << 16) | 
-                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_5] <<  8) | 
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_3] << 24) |
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_4] << 16) |
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_5] <<  8) |
                                 (uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_6]
                             );
+
+            if(rx_value_len > sizeof(heater_data_process_buf))
+            {
+                offset ++;
+                continue;
+            }
+
+            /* 先校验缓冲区数据是否足够完整帧: 8(头) + rx_value_len(数据) + 4(尾+校验+CR) = rx_value_len + 12 */
+            if((rx_in - offset) < (rx_value_len + 12)) {
+                break;
+            }
 
             if(heater_data_process_buf[offset + rx_value_len + 8] != HEATER_UART_FRAME_END_EXT) {
                 offset ++;
@@ -258,6 +267,16 @@ void heater_uart_service(void)
         {
             rx_command = heater_data_process_buf[offset + HEATER_UART_CMD_2] << 8 | heater_data_process_buf[offset + HEATER_UART_CMD_3];
             rx_value_len = heater_uart_data_length_find(heater_data_process_buf[offset + HEATER_UART_CMD_0],rx_command);
+
+            if(rx_value_len > sizeof(heater_data_process_buf))
+            {
+                offset ++;
+                continue;
+            }
+            /* 先校验缓冲区数据是否足够完整帧: 5(头) + rx_value_len(数据) + 4(尾+校验+CR) = rx_value_len + 9 */
+            if((rx_in - offset) < (rx_value_len + 9)) {
+                break;
+            }
 
             if(heater_data_process_buf[offset + rx_value_len + 5] != HEATER_UART_FRAME_END_EXT) {
                 offset ++;
@@ -279,10 +298,6 @@ void heater_uart_service(void)
             ESP_LOGI(TAG,"crc error (calc:0x%X  but data:0x%X)",calc_sum,src_sum);
             offset ++;
             continue;
-        }
-
-        if((rx_in - offset) < rx_value_len) {
-            break;
         }
 
         ESP_LOGI(TAG,"recv frame success,rx_value_len is %d,checksum %04X",rx_value_len,calc_sum);
@@ -311,8 +326,12 @@ void heater_uart_service_callback(void *parameter)
 void heater_uart_tx_queue_enqueue(uint8_t *data,uint32_t length)
 {
     struct heater_uart_send_msg msg_ptr;
+    if(length > 64)
+    {
+        return;
+    }
 
-    msg_ptr.data_ptr = data;  /* 指向相应的数据块地址 */
+    memcpy(msg_ptr.data_ptr,data,length);
     msg_ptr.data_size = length; /* 数据块的长度 */
 
     xQueueSend(heater_tx_queue, &msg_ptr, 0);
@@ -334,7 +353,7 @@ void heater_uart_service_init(void)
 {
     heater_queue_in = (unsigned char *)heater_uart_rx_buf;
     heater_queue_out = (unsigned char *)heater_uart_rx_buf;
-    heater_tx_queue = xQueueCreateStatic(10, sizeof(struct heater_uart_send_msg), heater_tx_queue_buffer, &heater_tx_queue_static);
+    heater_tx_queue = xQueueCreate(4, sizeof(struct heater_uart_send_msg));
     xTaskCreate(heater_uart_tx_queue_handle_callback, "heater_uart_tx_queue_handle", 4096, NULL, 5, NULL);
     xTaskCreate(heater_uart_service_callback, "heater_uart_service", 4096, NULL, 6, NULL);
 }

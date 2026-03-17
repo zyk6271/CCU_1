@@ -117,7 +117,7 @@ static void heater_poll_timer_callback(void* arg)
 {
     if(heater_detect_done == 1 && smartconfig_start_flag == 0)
     {
-        if(hearter_device_type_get() == HEATER_TYPE_RINNAL_BUSINESS)
+        if(hearter_device_type_get() == HEATER_TYPE_RINNAI_BUSINESS)
         {
             heater_rinnai_bussiness_poll_callback();
         }
@@ -131,7 +131,7 @@ static void heater_poll_timer_callback(void* arg)
 void heater_poll_timer_start(void)
 {
     esp_timer_stop(heater_poll_timer);
-    if(hearter_device_type_get() == HEATER_TYPE_RINNAL_BUSINESS)
+    if(hearter_device_type_get() == HEATER_TYPE_RINNAI_BUSINESS)
     {
         esp_timer_start_periodic(heater_poll_timer, 1500 * 1000);
     }

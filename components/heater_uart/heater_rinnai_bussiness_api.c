@@ -410,9 +410,11 @@ void heater_rinnai_bussiness_data_handle(uint8_t offset)
         return;
     }
 
-    uint64_t cmd_type = (heater_data_process_buf[offset + HEATER_UART_CMD_2] * 0x100000000) | heater_data_process_buf[offset + HEATER_UART_CMD_3] << 24 | 
-                            heater_data_process_buf[offset + HEATER_UART_CMD_4] << 16 | heater_data_process_buf[offset + HEATER_UART_CMD_5] << 8 | 
-                                heater_data_process_buf[offset + HEATER_UART_CMD_6];
+    uint64_t cmd_type = ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_2] << 32) |
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_3] << 24) | 
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_4] << 16) | 
+                                ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_5] <<  8) | 
+                                (uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_6];
 
     switch(cmd_type)
     {
@@ -420,7 +422,7 @@ void heater_rinnai_bussiness_data_handle(uint8_t offset)
             heater_rinnai_bussiness_info.error = char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START]) |
                                                         char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START + 3])* 10;
             ESP_LOGI(TAG,"heater_rinnai_bussiness_info error is [%02X]",heater_rinnai_bussiness_info.error);
-            heater_detect_finish(HEATER_TYPE_RINNAL_BUSINESS);
+            heater_detect_finish(HEATER_TYPE_RINNAI_BUSINESS);
             break;
         case 0x3330383032:
             heater_rinnai_bussiness_info.total_flow_rate = char_to_hex(heater_data_process_buf[offset + HEATER_UART_BUSSINESS_DATA_START]) << 4 |

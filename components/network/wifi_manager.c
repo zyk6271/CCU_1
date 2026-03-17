@@ -244,14 +244,10 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         smartconfig_retry_counter = 0;
         smartconfig_start_flag = 0;
         
-        set_wifi_state(WIFI_STATE_CONNECTED);
-        
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
         
-        // 停止SmartConfig相关定时器
-        smartconfig_wait_timer_stop();
-        
+        set_wifi_state(WIFI_STATE_CONNECTED);
         tcp_event_send(TCP_EVENT_WIFI_CONNECTED);
     } 
     else if (event_base == SC_EVENT && event_id == SC_EVENT_SCAN_DONE) 

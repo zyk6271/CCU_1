@@ -23,9 +23,9 @@
 #define HEATER_UART_FRAME_END_CR                        0x0D                                            //固定数据包尾
 
 //============================================================================= 
-#define HEATER_UART_RECV_BUF_LMT               2048              //串口数据接收缓存区大小,如MCU的RAM不够,可缩小
-#define HEATER_UART_PROCESS_LMT                2048             // 单包256byte
-#define HEATER_UART_SEND_BUF_LMT               2048              //根据用户DP数据大小量定，用户可根据实际情况修改
+#define HEATER_UART_RECV_BUF_LMT               1024              //串口数据接收缓存区大小,如MCU的RAM不够,可缩小
+#define HEATER_UART_PROCESS_LMT                1024             // 单包256byte
+#define HEATER_UART_SEND_BUF_LMT               1024              //根据用户DP数据大小量定，用户可根据实际情况修改
 
 #define HEATER_UART_FRAME_MIN_SIZE             10              
 
