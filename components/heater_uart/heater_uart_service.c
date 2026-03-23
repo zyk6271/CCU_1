@@ -24,28 +24,29 @@ unsigned char heater_data_process_buf[HEATER_UART_FRAME_MIN_SIZE + HEATER_UART_R
 unsigned char heater_uart_rx_buf[HEATER_UART_FRAME_MIN_SIZE + HEATER_UART_RECV_BUF_LMT];
 unsigned char heater_uart_tx_buf[HEATER_UART_FRAME_MIN_SIZE + HEATER_UART_RECV_BUF_LMT];
 
-unsigned char *heater_queue_in = NULL;
-unsigned char *heater_queue_out = NULL;
+unsigned char * heater_queue_in = NULL;
+unsigned char * heater_queue_out = NULL;
 
 static QueueHandle_t heater_tx_queue;
 
 void heater_uart_receive_input(unsigned char value)
 {
-    if(1 == heater_queue_out - heater_queue_in)
+// 计算下一个写入位置
+    unsigned char *next_in = heater_queue_in + 1;
+    if(next_in >= heater_uart_rx_buf + sizeof(heater_uart_rx_buf))
     {
-        ESP_LOGE(TAG,"heater_uart_receive queue is full now");
+        next_in = heater_uart_rx_buf; // 触底回环
     }
-    else if((heater_queue_in > heater_queue_out) && ((heater_queue_in - heater_queue_out) >= sizeof(heater_data_process_buf)))
+
+    // 如果下一个位置追上了 out 指针，说明队列已满
+    if(next_in == heater_queue_out)
     {
         ESP_LOGE(TAG,"heater_uart_receive queue is full now");
     }
     else
     {
-        if(heater_queue_in >= (unsigned char *)(heater_uart_rx_buf + sizeof(heater_uart_rx_buf)))
-        {
-            heater_queue_in = (unsigned char *)(heater_uart_rx_buf);
-        }
-        *heater_queue_in ++ = value;
+        *heater_queue_in = value;     // 第一步：先存入数据
+        heater_queue_in = next_in;    // 第二步：再更新指针（确保接收任务读到的数据一定是完整的）
     }
 }
 
@@ -86,13 +87,18 @@ unsigned char heater_queue_read_byte(void)
 {
     unsigned char value = 0;
 
+    // in != out 说明有数据
     if(heater_queue_out != heater_queue_in)
     {
-        if(heater_queue_out >= (unsigned char *)(heater_uart_rx_buf + sizeof(heater_uart_rx_buf)))
+        value = *heater_queue_out; // 第一步：先读取数据
+        
+        unsigned char *next_out = heater_queue_out + 1;
+        if(next_out >= heater_uart_rx_buf + sizeof(heater_uart_rx_buf))
         {
-            heater_queue_out = (unsigned char *)(heater_uart_rx_buf);
+            next_out = heater_uart_rx_buf; // 触底回环
         }
-        value = *heater_queue_out ++;
+        
+        heater_queue_out = next_out; // 第二步：再更新指针释放空间
     }
 
     return value;
@@ -237,7 +243,7 @@ void heater_uart_service(void)
                                 ((uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_5] <<  8) |
                                 (uint64_t)heater_data_process_buf[offset + HEATER_UART_CMD_6]
                             );
-
+            rx_value_len += 12;
             if(rx_value_len > sizeof(heater_data_process_buf))
             {
                 offset ++;
@@ -245,51 +251,51 @@ void heater_uart_service(void)
             }
 
             /* 先校验缓冲区数据是否足够完整帧: 8(头) + rx_value_len(数据) + 4(尾+校验+CR) = rx_value_len + 12 */
-            if((rx_in - offset) < (rx_value_len + 12)) {
+            if((rx_in - offset) < (rx_value_len)) {
                 break;
             }
 
-            if(heater_data_process_buf[offset + rx_value_len + 8] != HEATER_UART_FRAME_END_EXT) {
+            if(heater_data_process_buf[offset + rx_value_len - 4] != HEATER_UART_FRAME_END_EXT) {
                 offset ++;
                 continue;
             }
 
-            if(heater_data_process_buf[offset + rx_value_len + 11] != HEATER_UART_FRAME_END_CR) {
+            if(heater_data_process_buf[offset + rx_value_len - 1] != HEATER_UART_FRAME_END_CR) {
                 offset ++;
                 continue;
             }
 
 
-            calc_sum = heater_get_check_sum((unsigned char *)heater_data_process_buf + offset + 1,7 + rx_value_len + 1);
-            src_sum = (heater_data_process_buf[offset + rx_value_len + 9] << 8 | heater_data_process_buf[offset + rx_value_len + 10]);
+            calc_sum = heater_get_check_sum((unsigned char *)heater_data_process_buf + offset + 1,rx_value_len - 4);
+            src_sum = (heater_data_process_buf[offset + rx_value_len - 2] << 8 | heater_data_process_buf[offset + rx_value_len - 1]);
         }
         else
         {
             rx_command = heater_data_process_buf[offset + HEATER_UART_CMD_2] << 8 | heater_data_process_buf[offset + HEATER_UART_CMD_3];
             rx_value_len = heater_uart_data_length_find(heater_data_process_buf[offset + HEATER_UART_CMD_0],rx_command);
-
+            rx_value_len += 9;
             if(rx_value_len > sizeof(heater_data_process_buf))
             {
                 offset ++;
                 continue;
             }
             /* 先校验缓冲区数据是否足够完整帧: 5(头) + rx_value_len(数据) + 4(尾+校验+CR) = rx_value_len + 9 */
-            if((rx_in - offset) < (rx_value_len + 9)) {
+            if((rx_in - offset) < (rx_value_len)) {
                 break;
             }
 
-            if(heater_data_process_buf[offset + rx_value_len + 5] != HEATER_UART_FRAME_END_EXT) {
+            if(heater_data_process_buf[offset + rx_value_len - 4] != HEATER_UART_FRAME_END_EXT) {
                 offset ++;
                 continue;
             }
 
-            if(heater_data_process_buf[offset + rx_value_len + 8] != HEATER_UART_FRAME_END_CR) {
+            if(heater_data_process_buf[offset + rx_value_len - 1] != HEATER_UART_FRAME_END_CR) {
                 offset ++;
                 continue;
             }
 
-            calc_sum = heater_get_check_sum((unsigned char *)heater_data_process_buf + offset + 1,4 + rx_value_len + 1);
-            src_sum = (heater_data_process_buf[offset + rx_value_len + 6] << 8 | heater_data_process_buf[offset + rx_value_len + 7]);
+            calc_sum = heater_get_check_sum((unsigned char *)heater_data_process_buf + offset + 1,rx_value_len - 4);
+            src_sum = (heater_data_process_buf[offset + rx_value_len - 3] << 8 | heater_data_process_buf[offset + rx_value_len - 2]);
         }
 
 
@@ -300,16 +306,16 @@ void heater_uart_service(void)
             continue;
         }
 
-        ESP_LOGI(TAG,"recv frame success,rx_value_len is %d,checksum %04X",rx_value_len,calc_sum);
         heater_rinnai_data_handle(offset);
         heater_noritz_data_handle(offset);
         heater_rinnai_bussiness_data_handle(offset);
         offset += rx_value_len;
+        ESP_LOGI(TAG,"recv frame success,rx_value_len is %d,offset is %d,checksum %04X,rx_in %d",rx_value_len,offset,calc_sum,rx_in);
     }
 
     rx_in -= offset;
     if(rx_in > 0) {
-        memcpy((char *)heater_data_process_buf,(const char *)heater_data_process_buf + offset,rx_in);
+        memmove((char *)heater_data_process_buf, (const char *)heater_data_process_buf + offset, rx_in);
     }
 }
 
