@@ -20,7 +20,7 @@ const uint8_t fw_sub_ver = 0x00;
 
 void app_main(void)
 {
-    ESP_LOGI(TAG,"System Version is V1.%d.%d",fw_main_ver,fw_mid_ver,fw_sub_ver);
+    ESP_LOGI(TAG,"System Version is V%d.%d.%d",fw_main_ver,fw_mid_ver,fw_sub_ver);
     storage_init();
     key_init();
     signal_led_init();
