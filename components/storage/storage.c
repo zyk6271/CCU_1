@@ -1,3 +1,8 @@
+/**
+ * @file storage.c
+ * @brief NVS 持久化存储实现
+ */
+
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
@@ -8,103 +13,147 @@
 #include "storage.h"
 #include "esp_log.h"
 
+#define TAG "storage"
 #define STORAGE_NAMESPACE "storage"
 
-esp_err_t storage_save_key_blob(char* key,uint8_t* value,uint32_t length)
+esp_err_t storage_save_key_blob(const char *key, const uint8_t *value, uint32_t length)
 {
-    nvs_handle_t my_handle;
+    nvs_handle_t handle;
     esp_err_t err;
 
-    // Open
-    err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &my_handle);
-    if (err != ESP_OK) return err;
-
-    err = nvs_set_blob(my_handle, key, value, length);
-    if (err != ESP_OK) return err;
-
-    // Commit
-    err = nvs_commit(my_handle);
-    if (err != ESP_OK) return err;
-
-    // Close
-    nvs_close(my_handle);
-
-    return ESP_OK;
-}
-
-esp_err_t storage_save_key_value(char* key,uint32_t value)
-{
-    nvs_handle_t my_handle;
-    esp_err_t err;
-
-    // Open
-    err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &my_handle);
-    if (err != ESP_OK) return err;
-
-    err = nvs_set_u32(my_handle, key, value);
-    if (err != ESP_OK) return err;
-
-    // Commit
-    err = nvs_commit(my_handle);
-    if (err != ESP_OK) return err;
-
-    // Close
-    nvs_close(my_handle);
-
-    return ESP_OK;
-}
-
-esp_err_t storage_read_key_blob(char* key,uint8_t* value,uint32_t *length)
-{
-    nvs_handle_t my_handle;
-    esp_err_t err;
-    size_t required_size = 0;  // value will default to 0, if not set yet in NVS
-
-    // Open
-    err = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &my_handle);
-    if (err != ESP_OK) return err;
-
-    err = nvs_get_blob(my_handle, key, NULL, &required_size);
-    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) 
+    err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+    {
         return err;
-
-    if (required_size == 0) 
-    {
-        err = ESP_ERR_NVS_NOT_FOUND;
-    } 
-    else 
-    {
-        err = nvs_get_blob(my_handle, key, value, &required_size);
-        if (err != ESP_OK) {
-            return err;
-        }
-        *length = required_size;
     }
-    // Close
-    nvs_close(my_handle);
 
+    err = nvs_set_blob(handle, key, value, length);
+    if (err != ESP_OK)
+    {
+        nvs_close(handle);
+        return err;
+    }
+
+    err = nvs_commit(handle);
+    nvs_close(handle);
     return err;
 }
 
-esp_err_t storage_read_key_value(char* key,uint32_t *value)
+esp_err_t storage_save_key_value(const char *key, uint32_t value)
 {
+    nvs_handle_t handle;
     esp_err_t err;
-    nvs_handle_t my_handle;
 
-    uint32_t value_temp = 0;
-
-    // Open
-    err = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &my_handle);
-    if (err != ESP_OK) return err;
-
-    err = nvs_get_u32(my_handle, key, &value_temp);
-    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND) 
+    err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+    {
         return err;
+    }
 
-    *value = value_temp;
+    err = nvs_set_u32(handle, key, value);
+    if (err != ESP_OK)
+    {
+        nvs_close(handle);
+        return err;
+    }
 
-    // Close
-    nvs_close(my_handle);
+    err = nvs_commit(handle);
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t storage_read_key_blob(const char *key, uint8_t *value, uint32_t *length)
+{
+    nvs_handle_t handle;
+    esp_err_t err;
+    size_t required_size = 0;
+
+    err = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &handle);
+    if (err != ESP_OK)
+    {
+        return err;
+    }
+
+    err = nvs_get_blob(handle, key, NULL, &required_size);
+    if (err != ESP_OK && err != ESP_ERR_NVS_NOT_FOUND)
+    {
+        nvs_close(handle);
+        return err;
+    }
+
+    if (required_size == 0)
+    {
+        nvs_close(handle);
+        return ESP_ERR_NVS_NOT_FOUND;
+    }
+
+    err = nvs_get_blob(handle, key, value, &required_size);
+    if (err == ESP_OK)
+    {
+        *length = (uint32_t)required_size;
+    }
+
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t storage_read_key_value(const char *key, uint32_t *value)
+{
+    nvs_handle_t handle;
+    esp_err_t err;
+
+    err = nvs_open(STORAGE_NAMESPACE, NVS_READONLY, &handle);
+    if (err != ESP_OK)
+    {
+        return err;
+    }
+
+    uint32_t temp = 0;
+    err = nvs_get_u32(handle, key, &temp);
+    if (err == ESP_OK)
+    {
+        *value = temp;
+    }
+
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t storage_erase_key(const char *key)
+{
+    nvs_handle_t handle;
+    esp_err_t err;
+
+    err = nvs_open(STORAGE_NAMESPACE, NVS_READWRITE, &handle);
+    if (err != ESP_OK)
+    {
+        return err;
+    }
+
+    err = nvs_erase_key(handle, key);
+    if (err == ESP_OK)
+    {
+        err = nvs_commit(handle);
+    }
+
+    nvs_close(handle);
+    return err;
+}
+
+esp_err_t storage_erase_all(void)
+{
+    esp_err_t err = nvs_flash_erase();
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "NVS flash erase failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    err = nvs_flash_init();
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "NVS flash init after erase failed: %s", esp_err_to_name(err));
+    }
 
     return err;
 }
@@ -112,11 +161,11 @@ esp_err_t storage_read_key_value(char* key,uint32_t *value)
 esp_err_t storage_init(void)
 {
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }
-    ESP_ERROR_CHECK( err );
-
+    ESP_ERROR_CHECK(err);
     return err;
 }

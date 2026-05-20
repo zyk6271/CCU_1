@@ -1,39 +1,34 @@
-/*
- * Copyright (c) 2006-2020, RT-Thread Development Team
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date           Author       Notes
- * 2020-12-21     Rick       the first version
+/**
+ * @file wifi_service.c
+ * @brief WiFi 服务层 (Modbus 专用)
  */
+
 #include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/event_groups.h"
 #include "wifi_service.h"
-#include "tcp_client.h"
 #include "mcu_api.h"
 #include "system.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
+#include "network_service.h"
 
 static const char *TAG = "wifi_service";
 
 uint8_t ccu_device_id[7] = {0};
 
-void wifi_recv_buffer(uint8_t *data,uint32_t length)
+void wifi_recv_buffer(uint8_t *data, uint32_t length)
 {
-    while(length--)
+    while (length--)
     {
         wifi_uart_receive_input(*data++);
     }
 }
 
-void wifi_service_callback(void *parameter)
+static void wifi_service_task(void *param)
 {
-    while(1)
+    while (1)
     {
         wifi_uart_service();
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -42,24 +37,26 @@ void wifi_service_callback(void *parameter)
 
 void ccu_device_id_convert(void)
 {
-    uint8_t macAddr[6];
-    esp_wifi_get_mac(WIFI_IF_STA,macAddr);
-    ccu_device_id[0] = DEVICE_TYPE_WATER_HEATER;
-    ccu_device_id[1] = macAddr[5];
-    ccu_device_id[2] = macAddr[4];
-    ccu_device_id[3] = macAddr[3];
-    ccu_device_id[4] = macAddr[2];
-    ccu_device_id[5] = macAddr[1];
-    ccu_device_id[6] = macAddr[0];
-    ESP_LOGI(TAG,"\r\n-------------------------------------------------------------------------------------");
-    ESP_LOGI(TAG,"CCU Device Type [%02X],CCU Device ID [%02X][%02X][%02X][%02X][%02X][%02X]",ccu_device_id[0],ccu_device_id[1],ccu_device_id[2],ccu_device_id[3],ccu_device_id[4],ccu_device_id[5],ccu_device_id[6]);
-    ESP_LOGI(TAG,"\r\n--------------------------------------------------------------------------------------");
+    uint8_t mac[6];
+    esp_wifi_get_mac(WIFI_IF_STA, mac);
+
+    ccu_device_id[0] = DEVICE_TYPE_MODBUS;
+    ccu_device_id[1] = mac[5];
+    ccu_device_id[2] = mac[4];
+    ccu_device_id[3] = mac[3];
+    ccu_device_id[4] = mac[2];
+    ccu_device_id[5] = mac[1];
+    ccu_device_id[6] = mac[0];
+
+    ESP_LOGI(TAG, "CCU [%02X] ID %02X%02X%02X%02X%02X%02X",
+             ccu_device_id[0], ccu_device_id[1], ccu_device_id[2],
+             ccu_device_id[3], ccu_device_id[4], ccu_device_id[5], ccu_device_id[6]);
 }
 
 void wifi_service_init(void)
 {
-    tcp_client_init();
+    network_service_init();
     ccu_device_id_convert();
     wifi_service_queue_init();
-    xTaskCreatePinnedToCore(wifi_service_callback, "wifi-service", 4096, NULL, 3, NULL, tskNO_AFFINITY);
+    xTaskCreatePinnedToCore(wifi_service_task, "wifi-svc", 4096, NULL, 3, NULL, tskNO_AFFINITY);
 }

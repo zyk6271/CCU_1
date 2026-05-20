@@ -151,33 +151,46 @@ unsigned long byte_to_int(const unsigned char value[4])
 }
 
 /**
+ * @brief  环形队列: 计算指针的下一个位置 (带回绕)
+ * @param[in] {ptr} 当前指针位置
+ * @return 下一个位置 (到达缓冲区末尾时回绕到头部)
+ *
+ * [BUG7 FIX] 新增辅助函数, 用于 wifi_uart_receive_input 的满判断
+ */
+static volatile unsigned char *queue_next_pos(volatile unsigned char *ptr)
+{
+    ptr++;
+    if (ptr >= (unsigned char *)(wifi_uart_rx_buf + sizeof(wifi_uart_rx_buf)))
+    {
+        ptr = (unsigned char *)wifi_uart_rx_buf;
+    }
+    return ptr;
+}
+
+/**
  * @brief  串口接收数据暂存处理
  * @param[in] {value} 串口收到的1字节数据
  * @return Null
  * @note   在MCU串口处理函数中调用该函数,并将接收到的数据作为参数传入
+ *
+ * [BUG7 FIX] 原满判断逻辑 "1 == wifi_queue_out - wifi_queue_in" 在指针
+ *   回绕后失效 (out 在低地址, in 在高地址时差值为负, 永远 != 1),
+ *   导致队列满时仍继续写入覆盖未读数据.
+ *   修复: 改用 "下一个写入位置 == 读取位置" 判断满, 适用于所有回绕情况.
  */
 void wifi_uart_receive_input(unsigned char value)
 {
-    if(1 == wifi_queue_out - wifi_queue_in)
+    volatile unsigned char *next_in = queue_next_pos(wifi_queue_in);
+
+    if (next_in == wifi_queue_out)
     {
-        ESP_LOGE(TAG,"tcp_receive queue is full now");
-        //数据队列满
+        /* 队列满, 丢弃本字节 */
+        ESP_LOGE(TAG, "tcp_receive queue is full now");
+        return;
     }
-    else if((wifi_queue_in > wifi_queue_out) && ((wifi_queue_in - wifi_queue_out) >= sizeof(wifi_data_process_buf)))
-    {
-        ESP_LOGE(TAG,"tcp_receive queue is full now");
-        //数据队列满
-    }
-    else
-    {
-        //队列不满
-        if(wifi_queue_in >= (unsigned char *)(wifi_uart_rx_buf + sizeof(wifi_uart_rx_buf)))
-        {
-            wifi_queue_in = (unsigned char *)(wifi_uart_rx_buf);
-        }
-        
-        *wifi_queue_in ++ = value;
-    }
+
+    *wifi_queue_in = value;
+    wifi_queue_in = next_in;
 }
 
 /**
@@ -206,7 +219,7 @@ void wifi_uart_service(void)
             continue;
         }
         
-        if(wifi_data_process_buf[offset + DEVICE_TYPE] != DEVICE_TYPE_WATER_HEATER) {
+        if(wifi_data_process_buf[offset + DEVICE_TYPE] != DEVICE_TYPE_MODBUS) {
             offset ++;
             continue;
         }
